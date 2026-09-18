@@ -1,122 +1,1095 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCheck,
+  ChevronRight,
+  CircleHelp,
+  Clock3,
+  CloudOff,
+  Download,
+  Footprints,
+  HeartHandshake,
+  Hospital,
+  Leaf,
+  ArrowUpDown as Lift,
+  MapPin,
+  RefreshCw,
+  Route,
+  Settings2,
+  ShieldCheck,
+  TrainFront,
+  TriangleAlert,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  arrival,
+  isDemo,
+  loadSnapshot,
+  planJourney,
+  planRequest,
+  refreshJourney,
+  saveSnapshot,
+  time,
+} from "./journey";
+import type { Language, Scenario, Snapshot } from "./journey";
+import { RouteMap } from "./RouteMap";
+import { useSpeech } from "./useSpeech";
+import "./App.css";
+
+type View = "journey" | "details" | "change" | "help" | "settings";
+const stepIcons: Record<string, LucideIcon> = {
+  walk: Footprints,
+  train: TrainFront,
+  lift: Lift,
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [state, setState] = useState<Snapshot | null>(loadSnapshot);
+  const [view, setView] = useState<View>("journey");
+  const [language, setLanguage] = useState<Language>(
+    () => loadSnapshot()?.language ?? "en",
+  );
+  const [large, setLarge] = useState(() => loadSnapshot()?.large ?? false);
+  const [online, setOnline] = useState(navigator.onLine);
+  const [simulateOffline, setSimulateOffline] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [shellReady, setShellReady] = useState(false);
+  const [notice, setNotice] = useState("");
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const offline = !online || simulateOffline;
+  const t = (en: string, zh: string) => (language === "en" ? en : zh);
+  const journey = state?.journey;
+  const step = state && state.journey.steps[state.stepIndex];
+  const speech = useSpeech(
+    language,
+    offline,
+    `${view}-${step?.id}-${state?.phase}`,
+  );
+
+  useEffect(() => {
+    document.documentElement.lang = language === "en" ? "en-SG" : "zh-SG";
+  }, [language]);
+  useEffect(() => {
+    const connected = () => setOnline(true);
+    const disconnected = () => setOnline(false);
+    window.addEventListener("online", connected);
+    window.addEventListener("offline", disconnected);
+    return () => {
+      window.removeEventListener("online", connected);
+      window.removeEventListener("offline", disconnected);
+    };
+  }, []);
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let cancelled = false;
+    navigator.serviceWorker.ready
+      .then(async () => {
+        const [shell, map] = await Promise.all([
+          caches.match("/index.html", { ignoreSearch: true }),
+          caches.match("/data/neighbourhood.json", { ignoreSearch: true }),
+        ]);
+        if (!cancelled) setShellReady(Boolean(shell && map));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  useEffect(() => {
+    // This effect reports whether the external storage write succeeded.
+    // eslint-disable-next-line react/set-state-in-effect
+    if (state) setSaved(saveSnapshot({ ...state, language, large }));
+  }, [state, language, large]);
+  useEffect(() => {
+    if (loadSnapshot() || !navigator.onLine) return;
+    let cancelled = false;
+    planJourney(planRequest)
+      .then((result) => {
+        if (!cancelled)
+          setState({
+            schemaVersion: 1,
+            journey: result,
+            stepIndex: 0,
+            phase: "planned",
+            language: "en",
+            large: false,
+            blocked: false,
+            proposal: null,
+          });
+      })
+      .catch(() => {
+        if (!cancelled) setError("load");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function go(nextView: View) {
+    setView(nextView);
+    setNotice("");
+    window.scrollTo({ top: 0, behavior: "instant" });
+    requestAnimationFrame(() => headingRef.current?.focus());
+  }
+  async function prepare() {
+    if (offline) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await planJourney(planRequest);
+      setState({
+        schemaVersion: 1,
+        journey: result,
+        stepIndex: 0,
+        phase: "planned",
+        language,
+        large,
+        blocked: false,
+        proposal: null,
+      });
+    } catch {
+      setError("load");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function refresh(scenario: Scenario = "normal") {
+    if (!state || offline) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await refreshJourney(
+        state.journey,
+        state.journey.steps[state.stepIndex].id,
+        scenario,
+      );
+      if (result.status === "replacement_available")
+        setState(
+          (previous) =>
+            previous && {
+              ...previous,
+              proposal: result.journey,
+              blocked: false,
+            },
+        );
+      if (result.status === "no_accessible_route")
+        setState(
+          (previous) =>
+            previous && { ...previous, blocked: true, proposal: null },
+        );
+      if (result.status === "unchanged") {
+        setState(
+          (previous) =>
+            previous && {
+              ...previous,
+              blocked: false,
+              proposal: null,
+              journey: { ...previous.journey, updatedAt: result.checkedAt },
+            },
+        );
+        setNotice(
+          t("No further changes in this scenario.", "此情景暂无其他变化。"),
+        );
+      }
+    } catch {
+      setError("refresh");
+    } finally {
+      setBusy(false);
+    }
+  }
+  function acceptPlan() {
+    if (!state?.proposal) return;
+    const currentId = state.journey.steps[state.stepIndex].id;
+    const replacementIndex = state.proposal.steps.findIndex(
+      (item) => item.id === currentId,
+    );
+    const next: Snapshot = {
+      ...state,
+      language,
+      large,
+      journey: state.proposal,
+      stepIndex: Math.max(0, replacementIndex),
+      proposal: null,
+      blocked: false,
+    };
+    if (!saveSnapshot(next)) {
+      setError("save");
+      return;
+    }
+    setState(next);
+    go("journey");
+  }
+  function advance() {
+    if (!state || state.blocked || state.proposal) return;
+    if (state.phase === "planned") setState({ ...state, phase: "active" });
+    else if (state.stepIndex < state.journey.steps.length - 1)
+      setState({ ...state, stepIndex: state.stepIndex + 1 });
+    else setState({ ...state, phase: "arrived" });
+    window.scrollTo({ top: 0, behavior: "instant" });
+    requestAnimationFrame(() => headingRef.current?.focus());
+  }
+  const listen = (text: string) => (
+    <button className="listen-button" onClick={() => speech.speak(text)}>
+      {speech.speaking ? <VolumeX size={22} /> : <Volume2 size={22} />}
+      {speech.speaking
+        ? t("Stop reading", "停止朗读")
+        : t("Read aloud", "朗读指引")}
+    </button>
+  );
+  const back = view !== "journey" && (
+    <button className="back-button" onClick={() => go("journey")}>
+      <ArrowLeft size={20} />
+      {t("Back to journey", "返回行程")}
+    </button>
+  );
+  const timeRange = journey ? arrival(journey) : "";
+  const stepNumber = state ? state.stepIndex + 1 : 1;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+    <div className={`app ${large ? "large-text" : ""}`}>
+      <a href="#main" className="skip-link">
+        {t("Skip to journey", "跳至行程")}
+      </a>
+      <header className="site-header">
         <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          className="brand"
+          onClick={() => go("journey")}
+          aria-label={t("NebulaX — your journey", "伴行 — 您的行程")}
         >
-          Count is {count}
+          <span className="brand-mark">
+            <Route size={27} strokeWidth={2.2} />
+          </span>
+          <span>
+            Nebula<span className="brand-x">X</span>
+            <small>
+              {t("A little help along the way", "安心出发，一路相伴")}
+            </small>
+          </span>
         </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="header-actions">
+          <button
+            className="language-button"
+            onClick={() => setLanguage(language === "en" ? "zh" : "en")}
+            lang={language === "en" ? "zh" : "en"}
+          >
+            {language === "en" ? "中文" : "English"}
+          </button>
+          <button
+            className="settings-button"
+            aria-label={t("Display settings", "显示设置")}
+            onClick={() => go("settings")}
+          >
+            <Settings2 size={24} />
+          </button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
+      </header>
+      <div className="demo-ribbon">
+        <span className="demo-dot" />
+        {isDemo
+          ? t(
+              "Demo journey · Monday, 21 September 2026 · Sample conditions",
+              "演示行程 · 2026年9月21日，星期一 · 示例路况",
+            )
+          : t(
+              "Connected to journey API · route verification required",
+              "已连接行程服务 · 路线仍需核实",
+            )}
+      </div>
+      <main id="main" className="main-shell">
+        {back}
+        {state?.phase === "active" && view === "journey" && (
+          <nav
+            className="journey-tools"
+            aria-label={t("Journey help", "行程帮助")}
+          >
+            <span>
+              {t(
+                `Step ${stepNumber} of ${state.journey.steps.length}`,
+                `第${stepNumber}步，共${state.journey.steps.length}步`,
+              )}
+            </span>
+            <button onClick={() => go("help")}>
+              <CircleHelp size={21} />
+              {t("Get help", "获取帮助")}
+            </button>
+          </nav>
+        )}
+        {offline && (
+          <div className="connection-banner" role="status">
+            <CloudOff size={24} />
+            <div>
+              <strong>{t("Connection unavailable", "暂时无法连接网络")}</strong>
+              <p>
+                {state
+                  ? t(
+                      "Your saved instructions are still here. Live updates are paused.",
+                      "已保存的指引仍可查看。实时更新已暂停。",
+                    )
+                  : t(
+                      "No journey is saved on this phone yet.",
+                      "此手机尚未保存行程。",
+                    )}
+              </p>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="warning-banner" role="alert">
+            <TriangleAlert size={24} />
+            <div>
+              <strong>
+                {error === "save"
+                  ? t(
+                      "Could not save the updated route",
+                      "无法保存更新后的路线",
+                    )
+                  : t("Unable to check the journey", "暂时无法检查行程")}
+              </strong>
+              <p>
+                {t(
+                  "Please try again when connected. Any saved instructions remain available.",
+                  "连接网络后请重试。已保存的指引仍可查看。",
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+        {speech.message && (
+          <p className="warning-banner" role="status">
+            {speech.message}
+          </p>
+        )}
+        {notice && (
+          <p className="status-note" role="status">
+            {notice}
+          </p>
+        )}
+        {!state && (
+          <section className="empty-state">
+            <span className="large-symbol">
+              <Route />
+            </span>
+            <h1 ref={headingRef} tabIndex={-1}>
+              {t("Your next journey starts here", "从这里开始您的下一段行程")}
+            </h1>
+            <p>
+              {offline
+                ? t(
+                    "Connect once to prepare and save your hospital journey.",
+                    "请先连接网络，准备并保存您的医院行程。",
+                  )
+                : t(
+                    "Preparing your saved hospital appointment.",
+                    "正在准备已保存的医院预约行程。",
+                  )}
+            </p>
+            <button
+              className="primary"
+              disabled={busy || offline}
+              onClick={prepare}
+            >
+              {busy
+                ? t("Preparing…", "正在准备…")
+                : t("Prepare journey", "准备行程")}
+              <ArrowRight />
+            </button>
+          </section>
+        )}
+        {state && journey && step && (
+          <>
+            {view === "settings" ? (
+              <section className="standalone-card">
+                <span className="eyebrow">
+                  {t("MAKE IT COMFORTABLE", "适合您的设置")}
+                </span>
+                <h1 ref={headingRef} tabIndex={-1}>
+                  {t("Your display, your way", "让界面更适合您")}
+                </h1>
+                <fieldset>
+                  <legend>{t("Language", "语言")}</legend>
+                  <div className="option-row">
+                    <button
+                      aria-pressed={language === "en"}
+                      onClick={() => setLanguage("en")}
+                    >
+                      English
+                    </button>
+                    <button
+                      lang="zh"
+                      aria-pressed={language === "zh"}
+                      onClick={() => setLanguage("zh")}
+                    >
+                      中文
+                    </button>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend>{t("Text size", "文字大小")}</legend>
+                  <div className="option-row">
+                    <button
+                      aria-pressed={!large}
+                      onClick={() => setLarge(false)}
+                    >
+                      {t("Large", "大")}
+                    </button>
+                    <button aria-pressed={large} onClick={() => setLarge(true)}>
+                      {t("Extra large", "特大")}
+                    </button>
+                  </div>
+                </fieldset>
+                <div className="text-preview">
+                  <Check size={24} />
+                  <p>
+                    {t(
+                      "Take your time. We’ll guide you one step at a time.",
+                      "慢慢来。我们会一步一步为您指路。",
+                    )}
+                  </p>
+                </div>
+                <p className="muted">
+                  {t(
+                    "Your choices are saved on this phone. Read-aloud starts only when you choose it.",
+                    "您的选择会保存在此手机上。只有在您点击后才会开始朗读。",
+                  )}
+                </p>
+                <button className="primary" onClick={() => go("journey")}>
+                  {t("Back to journey", "返回行程")}
+                  <ArrowRight />
+                </button>
+              </section>
+            ) : view === "help" ? (
+              <section className="standalone-card">
+                <span className="large-symbol">
+                  <HeartHandshake size={32} />
+                </span>
+                <h1 ref={headingRef} tabIndex={-1}>
+                  {t("Let’s find your next step", "一起确认下一步")}
+                </h1>
+                <p>
+                  {t(
+                    "Take a moment. Your journey is still saved here.",
+                    "先休息一下。您的行程仍保存在这里。",
+                  )}
+                </p>
+                <div className="help-step">
+                  <span className="eyebrow">
+                    {t(
+                      `LAST CONFIRMED PROGRESS · STEP ${stepNumber}`,
+                      `当前进度 · 第${stepNumber}步`,
+                    )}
+                  </span>
+                  <h2>{step.instruction[language]}</h2>
+                  {listen(
+                    step.instruction[language] + ". " + step.detail[language],
+                  )}
+                </div>
+                <div className="staff-card">
+                  <ShieldCheck size={26} />
+                  <div>
+                    <h2>{t("Ask station staff", "向车站工作人员求助")}</h2>
+                    <p>
+                      {t(
+                        "Show them this screen. You need a step-free route to Tan Tock Seng Hospital and cannot use stairs.",
+                        "请向工作人员出示此页面。您需要前往陈笃生医院的无障碍路线，无法使用楼梯。",
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <p className="muted">
+                  {t(
+                    "No caregiver is linked in this prototype. No help request has been sent.",
+                    "此原型尚未连接家属。未发送求助信息。",
+                  )}
+                </p>
+                <button className="primary" onClick={() => go("journey")}>
+                  {t("Return to my instructions", "返回我的指引")}
+                  <ArrowRight />
+                </button>
+              </section>
+            ) : view === "change" && state.proposal ? (
+              <>
+                <div className="page-heading">
+                  <span className="eyebrow">
+                    {t("REVIEW BEFORE YOU CHANGE", "更改前请先查看")}
+                  </span>
+                  <h1 ref={headingRef} tabIndex={-1}>
+                    {t(
+                      "A new way to the same place",
+                      "换一条路线，前往同一目的地",
+                    )}
+                  </h1>
+                  <p>
+                    {t(
+                      "Your current route stays saved until you accept this one.",
+                      "接受新路线前，我们会保留当前路线。",
+                    )}
+                  </p>
+                </div>
+                <div className="journey-grid">
+                  <section className="card comparison-card">
+                    <div className="icon-heading">
+                      <TriangleAlert />
+                      <h2>{t("Walking approach changed", "步行路线有变化")}</h2>
+                    </div>
+                    <p>{state.proposal.alerts[0]?.message[language]}</p>
+                    <div className="comparison-times">
+                      <div>
+                        <span>{t("Original arrival", "原预计到达")}</span>
+                        <strong>{timeRange}</strong>
+                      </div>
+                      <ArrowRight />
+                      <div>
+                        <span>{t("Updated arrival", "新预计到达")}</span>
+                        <strong>{arrival(state.proposal)}</strong>
+                      </div>
+                    </div>
+                    <div className="reassurance">
+                      <Clock3 size={22} />
+                      <p>
+                        {t(
+                          "8 more minutes in this demo. Appointment: 10:00 am.",
+                          "此演示增加8分钟。预约时间：上午10点。",
+                        )}
+                      </p>
+                    </div>
+                    <p className="muted">
+                      {t(
+                        "Illustrative alternative. Accessibility has not been verified for real travel.",
+                        "替代路线仅供演示。实际无障碍条件尚未核实。",
+                      )}
+                    </p>
+                    <button className="primary" onClick={acceptPlan}>
+                      {t("Use updated route", "使用更新后的路线")}
+                      <Check />
+                    </button>
+                    <button className="secondary" onClick={() => go("journey")}>
+                      {t("Back to journey", "返回行程")}
+                    </button>
+                  </section>
+                  <RouteMap
+                    journey={state.proposal}
+                    original={journey}
+                    language={language}
+                  />
+                </div>
+              </>
+            ) : view === "details" ? (
+              <>
+                <div className="page-heading">
+                  <span className="eyebrow">
+                    {t("THE WHOLE JOURNEY", "完整行程")}
+                  </span>
+                  <h1 ref={headingRef} tabIndex={-1}>
+                    {t("From your door to the hospital", "从家门口到医院")}
+                  </h1>
+                  <p>
+                    {t(
+                      "One train. A gentler walking pace. Time to take it slowly.",
+                      "一趟地铁。按您的步速，慢慢前行。",
+                    )}
+                  </p>
+                </div>
+                <div className="journey-grid">
+                  <section className="card">
+                    <div className="section-heading">
+                      <h2>{t("Your steps", "行程步骤")}</h2>
+                      <span className="pill">
+                        {t("No train changes", "无需换乘地铁")}
+                      </span>
+                    </div>
+                    <ol className="full-steps">
+                      {journey.steps.map((item, index) => {
+                        const Icon = stepIcons[item.mode];
+                        return (
+                          <li key={item.id}>
+                            <span className="step-icon">
+                              <Icon size={23} />
+                            </span>
+                            <div>
+                              <span className="eyebrow">
+                                {t(
+                                  `STEP ${index + 1} · ${item.durationMinutes} MIN`,
+                                  `第${index + 1}步 · ${item.durationMinutes}分钟`,
+                                )}
+                              </span>
+                              <h3>{item.instruction[language]}</h3>
+                              <p>{item.detail[language]}</p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                    <div className="reassurance">
+                      <Clock3 />
+                      <p>
+                        {t(
+                          "Timing includes a slower walking pace and a buffer. These are sample estimates.",
+                          "时间包含较慢步速及缓冲时间。均为示例估计。",
+                        )}
+                      </p>
+                    </div>
+                  </section>
+                  <RouteMap journey={journey} language={language} />
+                </div>
+              </>
+            ) : state.phase === "arrived" ? (
+              <section className="standalone-card arrival-card">
+                <span className="arrival-check">
+                  <CheckCheck size={44} />
+                </span>
+                <span className="eyebrow">
+                  {t("JOURNEY COMPLETE", "行程已完成")}
+                </span>
+                <h1 ref={headingRef} tabIndex={-1}>
+                  {t("You’ve arrived, Mr Tan", "陈先生，您已到达")}
+                </h1>
+                <p>
+                  {t(
+                    "Take a moment to rest before your appointment.",
+                    "预约前，先休息一下吧。",
+                  )}
+                </p>
+                <div className="destination-compact">
+                  <Hospital />
+                  <div>
+                    <h2>{t("Tan Tock Seng Hospital", "陈笃生医院")}</h2>
+                    <p>{t("Appointment at 10:00 am", "预约时间：上午10点")}</p>
+                  </div>
+                </div>
+                <p className="muted">
+                  {t(
+                    "Arrival saved on this phone. No caregiver has been notified.",
+                    "到达记录已保存在此手机上。未通知家属。",
+                  )}
+                </p>
+                <button className="secondary" onClick={() => go("details")}>
+                  {t("View completed journey", "查看已完成行程")}
+                  <Route />
+                </button>
+              </section>
+            ) : (
+              <>
+                <div
+                  className={`page-heading greeting ${state.phase === "active" ? "active-heading" : ""}`}
                 >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+                  <div>
+                    <span className="eyebrow">
+                      {state.phase === "active"
+                        ? t("ONE STEP AT A TIME", "一步一步，安心前行")
+                        : t("YOUR NEXT JOURNEY", "您的下一段行程")}
+                    </span>
+                    <h1 ref={headingRef} tabIndex={-1}>
+                      {state.phase === "active" ? (
+                        t("On your way, Mr Tan.", "陈先生，安心前行。")
+                      ) : (
+                        <>
+                          {t("Good morning,", "早上好，")}
+                          <br />
+                          {t("Mr Tan.", "陈先生。")}
+                        </>
+                      )}
+                    </h1>
+                    <p>
+                      {state.phase === "active"
+                        ? t(
+                            "There’s no rush. Follow the instruction below.",
+                            "不用着急。请按照下方指引前行。",
+                          )
+                        : t(
+                            "A familiar journey. A little more peace of mind.",
+                            "熟悉的旅程，多一份安心。",
+                          )}
+                    </p>
+                  </div>
+                  <span className="greeting-art" aria-hidden="true">
+                    <Leaf size={52} strokeWidth={1.3} />
+                    <span className="art-line" />
+                  </span>
+                </div>
+                {state.blocked && (
+                  <section className="alert-card" role="alert">
+                    <TriangleAlert size={28} />
+                    <div>
+                      <h2>
+                        {t(
+                          "We cannot confirm a step-free route",
+                          "暂时无法确认无障碍路线",
+                        )}
+                      </h2>
+                      <p>
+                        {t(
+                          "Please ask station staff for help before continuing. Your saved route is available for reference.",
+                          "继续前请向车站工作人员求助。已保存的路线可供参考。",
+                        )}
+                      </p>
+                      <button className="secondary" onClick={() => go("help")}>
+                        {t("Get help", "获取帮助")}
+                        <ArrowRight />
+                      </button>
+                    </div>
+                  </section>
+                )}
+                {state.proposal && (
+                  <section className="alert-card" role="status">
+                    <TriangleAlert size={28} />
+                    <div>
+                      <h2>{t("A change to your journey", "您的行程有变化")}</h2>
+                      <p>{state.proposal.alerts[0]?.message[language]}</p>
+                      <button
+                        className="secondary"
+                        onClick={() => go("change")}
+                      >
+                        {t("Review updated route", "查看更新后的路线")}
+                        <ArrowRight />
+                      </button>
+                    </div>
+                  </section>
+                )}
+                <div className="journey-grid">
+                  <div className="journey-column">
+                    {state.phase === "planned" ? (
+                      <section className="card trip-card">
+                        <div className="destination">
+                          <span className="destination-icon">
+                            <Hospital size={29} />
+                          </span>
+                          <div>
+                            <span className="eyebrow">
+                              {t("HOSPITAL APPOINTMENT", "医院预约")}
+                            </span>
+                            <h2>{t("Tan Tock Seng Hospital", "陈笃生医院")}</h2>
+                            <p>
+                              {t(
+                                "Monday, 21 September · 10:00 am",
+                                "9月21日，星期一 · 上午10点",
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="departure-panel">
+                          <div>
+                            <span>{t("Leave home at", "出发时间")}</span>
+                            <strong>
+                              {time(journey.departureTime)}
+                              <small> am</small>
+                            </strong>
+                          </div>
+                          <span className="departure-arrow">
+                            <ArrowRight size={26} />
+                          </span>
+                          <div>
+                            <span>{t("Estimated arrival", "预计到达")}</span>
+                            <strong className="arrival-time">
+                              {timeRange}
+                            </strong>
+                            <small>
+                              {t(
+                                "Before your 10:00 appointment",
+                                "在上午10点预约之前",
+                              )}
+                            </small>
+                          </div>
+                        </div>
+                        <div className="preference-row">
+                          <span>
+                            <Lift size={20} />
+                            {t("No stairs", "无需爬楼梯")}
+                          </span>
+                          <span>
+                            <Footprints size={20} />
+                            {t("Your walking pace", "按您的步速")}
+                          </span>
+                        </div>
+                        <button
+                          className="primary"
+                          disabled={state.blocked || Boolean(state.proposal)}
+                          onClick={advance}
+                        >
+                          {t("Start journey", "开始行程")}
+                          <ArrowRight size={25} />
+                        </button>
+                        <div className="route-summary">
+                          <span className="route-dot" />
+                          <div>
+                            <strong>
+                              {t("Home, Ang Mo Kio", "家，宏茂桥")}
+                            </strong>
+                            <span>
+                              {t(
+                                "Walk → NS16 Ang Mo Kio",
+                                "步行 → NS16 宏茂桥",
+                              )}
+                            </span>
+                          </div>
+                          <span className="rail-badge">NS</span>
+                          <div>
+                            <strong>
+                              {t("Novena → Hospital", "诺维娜 → 医院")}
+                            </strong>
+                            <span>
+                              {t(
+                                "4 stops · no train changes",
+                                "4站 · 无需换乘地铁",
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          className="text-button"
+                          onClick={() => go("details")}
+                        >
+                          {t("See the full route", "查看完整路线")}
+                          <ChevronRight size={20} />
+                        </button>
+                      </section>
+                    ) : (
+                      <section className="card guidance-card">
+                        <div className="section-heading">
+                          <span className="eyebrow">
+                            {t(
+                              `STEP ${stepNumber} OF ${journey.steps.length}`,
+                              `第${stepNumber}步，共${journey.steps.length}步`,
+                            )}
+                          </span>
+                          <span className="pill">
+                            <Clock3 size={16} />
+                            {timeRange}
+                          </span>
+                        </div>
+                        <div
+                          className="progress-track"
+                          aria-label={t(
+                            `Step ${stepNumber} of ${journey.steps.length}`,
+                            `第${stepNumber}步，共${journey.steps.length}步`,
+                          )}
+                        >
+                          {journey.steps.map((item, i) => (
+                            <span
+                              key={item.id}
+                              className={i <= state.stepIndex ? "done" : ""}
+                            />
+                          ))}
+                        </div>
+                        <span className="instruction-icon">
+                          {(() => {
+                            const Icon = stepIcons[step.mode];
+                            return <Icon size={36} />;
+                          })()}
+                        </span>
+                        <h2 className="instruction-title">
+                          {step.instruction[language]}
+                        </h2>
+                        <p className="step-place">
+                          <MapPin size={18} />
+                          {step.place[language]}
+                        </p>
+                        <p className="instruction-detail">
+                          {step.detail[language]}
+                        </p>
+                        {listen(
+                          step.instruction[language] +
+                            ". " +
+                            step.detail[language],
+                        )}
+                        <button
+                          className="primary"
+                          disabled={state.blocked || Boolean(state.proposal)}
+                          onClick={advance}
+                        >
+                          {step.confirmation[language]}
+                          <Check size={25} />
+                        </button>
+                        {state.stepIndex > 0 && (
+                          <button
+                            className="text-button"
+                            onClick={() =>
+                              setState({
+                                ...state,
+                                stepIndex: state.stepIndex - 1,
+                              })
+                            }
+                          >
+                            <ArrowLeft size={20} />
+                            {t("Previous instruction", "上一条指引")}
+                          </button>
+                        )}
+                        <button
+                          className="text-button"
+                          onClick={() => go("details")}
+                        >
+                          {t("See the full route", "查看完整路线")}
+                          <ChevronRight size={20} />
+                        </button>
+                      </section>
+                    )}
+                    <div className="saved-card">
+                      <span className="saved-icon">
+                        {saved ? (
+                          <Download size={23} />
+                        ) : (
+                          <TriangleAlert size={23} />
+                        )}
+                      </span>
+                      <div>
+                        <strong>
+                          {saved && shellReady
+                            ? t("Saved for offline use", "已保存，可离线查看")
+                            : saved
+                              ? t(
+                                  "Instructions saved on this phone",
+                                  "指引已保存在此手机上",
+                                )
+                              : t("Journey could not be saved", "无法保存行程")}
+                        </strong>
+                        <p>
+                          {saved && shellReady
+                            ? t(
+                                "Your route and instructions stay with you, even without a connection.",
+                                "即使没有网络，也能查看路线和指引。",
+                              )
+                            : saved
+                              ? t(
+                                  "Full offline reopening is available after the app finishes downloading.",
+                                  "应用下载完成后，即可离线重新打开。",
+                                )
+                              : t(
+                                  "Keep this screen open. Storage may be unavailable.",
+                                  "请保持此页面打开。手机存储可能不可用。",
+                                )}
+                        </p>
+                      </div>
+                      {saved && <Check size={22} />}
+                    </div>
+                  </div>
+                  <aside className="journey-aside">
+                    <RouteMap journey={journey} language={language} />
+                    <div className="conditions-card">
+                      <div>
+                        <span className="status-dot" />
+                        <strong>
+                          {t("Sample travel conditions", "示例路况")}
+                        </strong>
+                      </div>
+                      <p>
+                        {t(
+                          "Crowding unknown · lift status not verified",
+                          "拥挤程度未知 · 电梯状态未核实",
+                        )}
+                      </p>
+                      <div className="conditions-bottom">
+                        <span>
+                          {t("Last update", "最后更新")}{" "}
+                          {time(journey.updatedAt)}
+                        </span>
+                        <button
+                          aria-label={t("Check for updates", "检查更新")}
+                          disabled={offline || busy}
+                          onClick={() => refresh()}
+                        >
+                          <RefreshCw size={17} />
+                          {busy
+                            ? t("Checking…", "检查中…")
+                            : t("Check", "检查")}
+                        </button>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
+                <div className="help-strip">
+                  <div>
+                    <HeartHandshake size={28} />
+                    <span>
+                      {t(
+                        "A little help is always okay.",
+                        "需要帮忙，随时开口。",
+                      )}
+                    </span>
+                  </div>
+                  <button onClick={() => go("help")}>
+                    {t("Get help", "获取帮助")}
+                    <ArrowRight size={21} />
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+        {isDemo && state && (
+          <details className="demo-controls">
+            <summary>{t("Demo scenarios", "演示情景")}</summary>
+            <p>
+              {t(
+                "For reviewing the prototype. These controls simulate conditions; no live travel advice is provided.",
+                "用于体验原型。以下选项模拟不同情况，不提供实时出行建议。",
+              )}
+            </p>
+            <div className="scenario-buttons">
+              <button
+                disabled={offline || busy}
+                onClick={() => {
+                  go("journey");
+                  refresh("normal");
+                }}
+              >
+                {t("Normal journey", "正常行程")}
+              </button>
+              <button
+                disabled={offline || busy || state.phase === "arrived"}
+                onClick={() => {
+                  go("journey");
+                  refresh("change");
+                }}
+              >
+                {t("Route change", "路线变化")}
+              </button>
+              <button
+                disabled={offline || busy || state.phase === "arrived"}
+                onClick={() => {
+                  go("journey");
+                  refresh("blocked");
+                }}
+              >
+                {t("No accessible route", "无无障碍路线")}
+              </button>
+              <button
+                aria-pressed={simulateOffline}
+                onClick={() => setSimulateOffline(!simulateOffline)}
+              >
+                {simulateOffline
+                  ? t("Restore connection", "恢复连接")
+                  : t("Simulate offline", "模拟离线")}
+              </button>
+              <button
+                disabled={offline || busy}
+                onClick={() => {
+                  go("journey");
+                  prepare();
+                }}
+              >
+                {t("Restart demo", "重新开始演示")}
+              </button>
+            </div>
+          </details>
+        )}
+      </main>
+      <footer className="site-footer">
+        <span>
+          <Leaf size={17} />
+          {t("A little confidence. Every journey.", "每一段旅程，多一份安心。")}
+        </span>
+        <button onClick={() => go("help")}>
+          <CircleHelp size={18} />
+          {t("Help", "帮助")}
+        </button>
+      </footer>
+    </div>
+  );
 }
-
-export default App
+export default App;

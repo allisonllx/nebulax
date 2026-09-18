@@ -1,0 +1,216 @@
+{
+  "status": "replacement_available",
+  "journey": {
+    "id": "demo-tan-001",
+    "version": 2,
+    "status": "ready",
+    "updatedAt": "2026-09-21T08:40:00+08:00",
+    "departureTime": "2026-09-21T08:45:00+08:00",
+    "arrivalWindow": {
+      "earliest": "2026-09-21T09:43:00+08:00",
+      "latest": "2026-09-21T09:53:00+08:00"
+    },
+    "steps": [
+      {
+        "id": "home-walk",
+        "mode": "walk",
+        "instruction": {
+          "en": "Walk to Ang Mo Kio station",
+          "zh": "步行到宏茂桥地铁站"
+        },
+        "detail": {
+          "en": "Take your time. At the station, look for the lift sign.",
+          "zh": "慢慢走。到达地铁站后，寻找电梯标志。"
+        },
+        "confirmation": {
+          "en": "I'm at the station",
+          "zh": "我已到达地铁站"
+        },
+        "durationMinutes": 10,
+        "place": {
+          "en": "Home → Ang Mo Kio · NS16",
+          "zh": "家 → 宏茂桥 · NS16"
+        }
+      },
+      {
+        "id": "amk-lift",
+        "mode": "lift",
+        "instruction": {
+          "en": "Take the lift to the platform",
+          "zh": "乘电梯到站台"
+        },
+        "detail": {
+          "en": "Follow signs for the North South Line towards Marina South Pier. Ask station staff if you cannot find the lift.",
+          "zh": "跟随南北线往滨海南码头方向的标志。如果找不到电梯，请向车站工作人员求助。"
+        },
+        "confirmation": {
+          "en": "I'm on the platform",
+          "zh": "我已到达站台"
+        },
+        "durationMinutes": 5,
+        "place": {
+          "en": "Ang Mo Kio · NS16",
+          "zh": "宏茂桥 · NS16"
+        }
+      },
+      {
+        "id": "train",
+        "mode": "train",
+        "instruction": {
+          "en": "Take the train to Novena",
+          "zh": "乘地铁到诺维娜站"
+        },
+        "detail": {
+          "en": "Towards Marina South Pier. Novena is 4 stops away: Bishan, Braddell, Toa Payoh, then Novena. Confirm when you get off.",
+          "zh": "往滨海南码头方向，共4站：碧山、布莱德、 大巴窑，然后到诺维娜。下车后请确认。"
+        },
+        "confirmation": {
+          "en": "I've reached Novena",
+          "zh": "我已到达诺维娜"
+        },
+        "durationMinutes": 15,
+        "place": {
+          "en": "NS16 → NS20 · North South Line",
+          "zh": "NS16 → NS20 · 南北线"
+        }
+      },
+      {
+        "id": "novena-lift",
+        "mode": "lift",
+        "instruction": {
+          "en": "Take the lift to the concourse",
+          "zh": "乘电梯到大厅"
+        },
+        "detail": {
+          "en": "Look for the lift sign. Ask station staff to confirm the step-free exit towards the hospital.",
+          "zh": "寻找电梯标志。请向工作人员确认前往医院的无障碍出口。"
+        },
+        "confirmation": {
+          "en": "I'm at the concourse",
+          "zh": "我已到达大厅"
+        },
+        "durationMinutes": 5,
+        "place": {
+          "en": "Novena · NS20",
+          "zh": "诺维娜 · NS20"
+        }
+      },
+      {
+        "id": "hospital-walk",
+        "mode": "walk",
+        "instruction": {
+          "en": "Use the alternative hospital approach",
+          "zh": "使用另一条路线前往医院"
+        },
+        "detail": {
+          "en": "Demo only: an alternative walking connection adds 8 minutes. Its accessibility and landmarks must be verified before real use.",
+          "zh": "仅供演示：另一条步行路线增加8分钟。实际使用前须核实其无障碍设施及地标。"
+        },
+        "confirmation": {
+          "en": "I have arrived",
+          "zh": "我已到达"
+        },
+        "durationMinutes": 23,
+        "place": {
+          "en": "Novena → Tan Tock Seng Hospital",
+          "zh": "诺维娜 → 陈笃生医院"
+        }
+      }
+    ],
+    "routeGeometry": {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "mode": "walk"
+          },
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                103.843,
+                1.372
+              ],
+              [
+                103.848,
+                1.372
+              ],
+              [
+                103.8496,
+                1.37
+              ]
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "mode": "train"
+          },
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                103.8496,
+                1.37
+              ],
+              [
+                103.8492,
+                1.351
+              ],
+              [
+                103.8467,
+                1.3405
+              ],
+              [
+                103.8474,
+                1.3326
+              ],
+              [
+                103.8438,
+                1.3205
+              ]
+            ]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "mode": "walk"
+          },
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                103.8438,
+                1.3205
+              ],
+              [
+                103.8433,
+                1.3228
+              ],
+              [
+                103.8455,
+                1.3232
+              ],
+              [
+                103.8464,
+                1.3215
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    "alerts": [
+      {
+        "id": "demo-closure",
+        "message": {
+          "en": "Sample closure on the usual hospital walking approach. Alternative adds 8 minutes.",
+          "zh": "示例：原医院步行路线关闭。另一条路线增加8分钟。"
+        }
+      }
+    ]
+  }
+}
