@@ -19,12 +19,33 @@ NSL_DISRUPTION = {"value": {
                  "CreatedDate": "2026-09-21 08:17:00"}],
 }}
 
+# Field-for-field the shape FacilitiesMaintenance really returns (probed 18 Sep 2026).
+NOVENA_LIFT_OUT = {"value": [{
+    "Line": "NSL", "StationCode": "NS20", "StationName": "Novena",
+    "LiftID": "B1L01", "LiftDesc": "Exit A Street level - Concourse",
+}]}
+
+# Same envelope as the data.gov.sg 2-hour nowcast, reduced to the areas the demo journey touches.
+HEAVY_RAIN = {"data": {
+    "area_metadata": [
+        {"name": "Ang Mo Kio", "label_location": {"latitude": 1.375, "longitude": 103.839}},
+        {"name": "Novena", "label_location": {"latitude": 1.32, "longitude": 103.844}},
+    ],
+    "items": [{"forecasts": [
+        {"area": "Ang Mo Kio", "forecast": "Heavy Thundery Showers"},
+        {"area": "Novena", "forecast": "Moderate Rain"},
+    ]}],
+}}
+
 
 @dataclass
 class Scenario:
     name: str
     title: Text
-    train_alerts: dict = field(repr=False)
+    # None = that feed stays live; a dict replaces the client's response.
+    train_alerts: dict | None = None
+    facilities: dict | None = None
+    weather: dict | None = None
 
 
 SCENARIO_DEFS = {
@@ -32,6 +53,21 @@ SCENARIO_DEFS = {
         name="nsl_disruption",
         title=Text(en="NSL disrupted Ang Mo Kio–Newton (simulated)", zh="南北线宏茂桥至纽顿中断(模拟)"),
         train_alerts=NSL_DISRUPTION,
+    ),
+    "novena_lift_out": Scenario(
+        name="novena_lift_out",
+        title=Text(en="Novena Exit A lift under maintenance (simulated)", zh="诺维娜 A 出口电梯维修(模拟)"),
+        facilities=NOVENA_LIFT_OUT,
+    ),
+    "heavy_rain": Scenario(
+        name="heavy_rain",
+        title=Text(en="Heavy rain over the route (simulated)", zh="路线沿途大雨(模拟)"),
+        weather=HEAVY_RAIN,
+    ),
+    "bad_day": Scenario(  # everything at once — the "worst morning" demo
+        name="bad_day",
+        title=Text(en="Disruption + lift outage + rain (simulated)", zh="故障+电梯维修+大雨(模拟)"),
+        train_alerts=NSL_DISRUPTION, facilities=NOVENA_LIFT_OUT, weather=HEAVY_RAIN,
     ),
 }
 

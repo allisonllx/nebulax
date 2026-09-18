@@ -21,8 +21,16 @@ def client(monkeypatch):
     async def fake_train_alerts():
         return NORMAL_DAY
 
+    async def fake_facilities():
+        return {"value": []}
+
+    async def fake_weather():
+        return {"data": {"area_metadata": [], "items": []}}
+
     monkeypatch.setattr(journeys_api, "route_candidates", fake_route_candidates)
     monkeypatch.setattr(journeys_api, "train_service_alerts", fake_train_alerts)
+    monkeypatch.setattr(journeys_api, "facilities_maintenance", fake_facilities)
+    monkeypatch.setattr(journeys_api, "two_hour_forecast", fake_weather)
     journeys_api.SCENARIOS.deactivate()
     with TestClient(app) as c:
         yield c
@@ -93,3 +101,27 @@ def test_a_dead_feed_reports_unknown_freshness(client, monkeypatch):
     assert r.status_code == 200
     assert r.json()["result"] == "unchanged"
     assert r.json()["dataFreshness"] == "unknown"
+
+
+def test_refresh_unchanged_still_reports_lift_and_rain_warnings(client, monkeypatch):
+    trip = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+
+    assert client.post("/api/scenarios/novena_lift_out/activate").status_code == 200
+    r = client.post(f"/api/journeys/{trip['id']}/refresh", json={"version": trip["version"]})
+
+    body = r.json()
+    assert body["result"] == "unchanged"           # route itself is still fine
+    types = {a["type"] for a in body["alerts"]}
+    assert "lift_maintenance" in types
+    lift = next(a for a in body["alerts"] if a["type"] == "lift_maintenance")
+    assert lift["dataSource"] == "simulated"
+    assert "Exit A" in lift["message"]["en"]
+
+
+def test_plan_attaches_current_warnings_to_the_journey(client):
+    assert client.post("/api/scenarios/heavy_rain/activate").status_code == 200
+
+    j = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+
+    assert j["dataMode"] == "simulated"
+    assert any(a["type"] == "weather" for a in j["alerts"])
