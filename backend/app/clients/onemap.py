@@ -34,6 +34,16 @@ class OneMapClient:
             self._expires_at = float(body.get("expiry_timestamp", time.time() + 3 * 86400))
             return self._token
 
+    async def search(self, query: str) -> list[dict]:
+        """OneMap address/place search, raw result rows."""
+        token = await self._current_token()
+        async with httpx.AsyncClient(timeout=30, headers={"Authorization": token}) as http:
+            r = await http.get(f"{BASE}/common/elastic/search",
+                               params={"searchVal": query, "returnGeom": "Y",
+                                       "getAddrDetails": "Y", "pageNum": 1})
+            r.raise_for_status()
+            return r.json().get("results", [])
+
     async def route_candidates(self, origin, destination, arrive_by: datetime) -> list[dict]:
         """Transit and bus-only itineraries for the trip, as raw OneMap dicts."""
         token = await self._current_token()

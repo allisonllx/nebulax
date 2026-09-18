@@ -86,9 +86,16 @@ class Journey(ApiModel):
     alternatives: list["Journey"] = []
 
 
+class PlacePin(ApiModel):
+    """An ad-hoc location chosen in the app (usually via geocoding)."""
+    lat: float
+    lon: float
+    name: str
+
+
 class PlanRequest(ApiModel):
-    origin: str = "saved-home"
-    destination: str = "ttsh-entrance"
+    origin: str | PlacePin = "saved-home"
+    destination: str | PlacePin = "ttsh-entrance"
     arrive_by: datetime
     step_free: bool = True
     walking_speed_factor: float = 0.6

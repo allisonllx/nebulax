@@ -172,3 +172,30 @@ def test_choosing_the_bus_alternative_changes_what_refresh_protects(client):
 
     assert on_mrt["result"] == "replacement_available"   # his route is broken
     assert on_bus["result"] == "unchanged"               # the chosen bus route is not
+
+
+def test_plan_accepts_a_custom_origin_and_destination(client):
+    body = {**PLAN_BODY,
+            "origin": {"lat": 1.3521, "lon": 103.8198, "name": "Toa Payoh Hub"},
+            "destination": {"lat": 1.2996, "lon": 103.8455, "name": "Singapore General Hospital"}}
+
+    r = client.post("/api/journeys/plan", json=body)
+
+    assert r.status_code == 200
+    j = r.json()
+    assert j["steps"][-1]["instruction"]["en"].rstrip(".").endswith("Singapore General Hospital")
+    assert len(j["routeGeometry"]["features"]) >= 1
+
+
+def test_geocode_proxies_the_search_provider(client, monkeypatch):
+    async def fake_search(q):
+        return [{"SEARCHVAL": "TAN TOCK SENG HOSPITAL", "ADDRESS": "11 JALAN TAN TOCK SENG",
+                 "LATITUDE": "1.3214", "LONGITUDE": "103.8459"}]
+
+    monkeypatch.setattr(journeys_api, "geocode_search", fake_search)
+    r = client.get("/api/geocode", params={"q": "tan tock seng"})
+
+    assert r.status_code == 200
+    hit = r.json()["results"][0]
+    assert hit == {"name": "Tan Tock Seng Hospital", "address": "11 Jalan Tan Tock Seng",
+                   "lat": 1.3214, "lon": 103.8459}

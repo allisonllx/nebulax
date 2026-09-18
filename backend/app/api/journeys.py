@@ -7,7 +7,7 @@ from app import config
 from app.clients.datamall import facilities_maintenance, train_service_alerts
 from app.clients.onemap import OneMapClient
 from app.clients.weather import two_hour_forecast
-from app.models import Journey, Place, PlanRequest, RefreshRequest, RefreshResponse
+from app.models import Journey, Place, PlacePin, PlanRequest, RefreshRequest, RefreshResponse
 from app.scenarios import SCENARIO_DEFS, ScenarioState
 from app.services import conditions, planner, refresh
 from app.services.itinerary import convert
@@ -22,18 +22,26 @@ _onemap = OneMapClient()
 
 # Module-level indirection so tests (and later a poller/cache) can substitute the feeds.
 route_candidates = _onemap.route_candidates
+geocode_search = _onemap.search
 
 
 def _now() -> datetime:
     return datetime.now(tz=SGT)
 
 
-def _places(req: PlanRequest):
+def _resolve(place: str | PlacePin) -> Place:
+    if isinstance(place, PlacePin):
+        from app.models import Text
+        return Place(lat=place.lat, lon=place.lon, name=Text(en=place.name, zh=place.name))
     try:
-        return config.SAVED_PLACES[req.origin], config.SAVED_PLACES[req.destination]
+        return config.SAVED_PLACES[place]
     except KeyError as e:
-        raise HTTPException(status_code=422, detail=f"Unknown place id {e.args[0]!r}. "
+        raise HTTPException(status_code=422, detail=f"Unknown place id {place!r}. "
                                                     f"Known: {sorted(config.SAVED_PLACES)}") from e
+
+
+def _places(req: PlanRequest):
+    return _resolve(req.origin), _resolve(req.destination)
 
 
 async def _feeds():
@@ -115,6 +123,26 @@ async def refresh_journey(journey_id: str, body: RefreshRequest) -> RefreshRespo
     if out.journey is not None:
         STORE.bump_version(journey_id, out.journey.version)
     return out
+
+
+@router.get("/geocode")
+async def geocode(q: str):
+    """Address / place search for the trip planner. Names are title-cased for display."""
+    try:
+        rows = await geocode_search(q)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Search provider unavailable: {e}") from e
+    results = []
+    for row in rows[:8]:
+        try:
+            results.append({
+                "name": (row.get("SEARCHVAL") or "").title(),
+                "address": (row.get("ADDRESS") or "").title(),
+                "lat": float(row["LATITUDE"]), "lon": float(row["LONGITUDE"]),
+            })
+        except (KeyError, ValueError):
+            continue
+    return {"results": results}
 
 
 @router.get("/scenarios")

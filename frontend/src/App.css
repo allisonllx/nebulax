@@ -1916,3 +1916,77 @@ legend {
 .tunnel-banner svg {
   flex-shrink: 0;
 }
+
+/* --- Caregiver trip planner -------------------------------------------------- */
+.trip-planner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.trip-planner h2 {
+  font-size: 1.25rem;
+}
+.place-field label > span {
+  display: block;
+  font-size: 0.8em;
+  font-weight: 700;
+  color: #47604f;
+  margin-bottom: 6px;
+}
+.place-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1.5px solid #d8e4d2;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fbfdf9;
+  color: #47604f;
+}
+.place-input input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 1em;
+  outline: none;
+  min-width: 0;
+}
+.place-hits {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  border: 1.5px solid #d8e4d2;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+.place-hits button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid #edf2ea;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.place-hits button:hover {
+  background: #f2f7ef;
+}
+.place-hits span {
+  display: flex;
+  flex-direction: column;
+}
+.place-hits small {
+  color: #6a7d70;
+  font-size: 0.78em;
+}
+.planner-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

@@ -70,9 +70,14 @@ export const refreshSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("no_accessible_route"), message: bilingual }),
 ]);
 export type RefreshResult = z.infer<typeof refreshSchema>;
+export interface PlacePin {
+  lat: number;
+  lon: number;
+  name: string;
+}
 export interface PlanRequest {
-  origin: string;
-  destination: string;
+  origin: string | PlacePin;
+  destination: string | PlacePin;
   arriveBy: string;
   stepFree: boolean;
   walkingSpeedFactor: number;

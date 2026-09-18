@@ -43,6 +43,7 @@ import type { Language, Scenario, Snapshot } from "./journey";
 import { RouteMap } from "./RouteMap";
 import { useSpeech } from "./useSpeech";
 import { Onboarding, type SetupAnswers } from "./Onboarding";
+import { TripPlanner } from "./TripPlanner";
 import { AppointmentPanel } from "./AppointmentPanel";
 import { FamilyPanel } from "./FamilyPanel";
 import {
@@ -782,6 +783,25 @@ function App() {
                     {t("Family settings", "家属设置")}
                   </button>
                 </div>
+                {!isDemo && (
+                  <TripPlanner
+                    language={language}
+                    onPlanned={(chosen) => {
+                      setState({
+                        ...state,
+                        journey: chosen,
+                        stepIndex: 0,
+                        phase: "planned",
+                        blocked: false,
+                        proposal: null,
+                        progressUpdatedAt: null,
+                      });
+                      setNotice(
+                        t("New journey saved for Mr Tan.", "新行程已保存，爸爸那边已更新。"),
+                      );
+                    }}
+                  />
+                )}
               </section>
             ) : view === "family" ? (
               <FamilyPanel
