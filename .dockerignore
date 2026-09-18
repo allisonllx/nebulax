@@ -1,0 +1,13 @@
+.git
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/probe-output
+PS2
+LTA_DataMall_API_User_Guide.pdf
+docs
+*.md

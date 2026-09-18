@@ -1,0 +1,16 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - VITE_MAPTILER_KEY=${_MAPTILER_KEY}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/nebulax/app
+      - .
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/nebulax/app
+substitutions:
+  _MAPTILER_KEY: ""
+  _REGION: asia-southeast1
+options:
+  logging: CLOUD_LOGGING_ONLY
