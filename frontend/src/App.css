@@ -985,11 +985,20 @@ legend {
     padding-inline: 22px;
     max-width: 640px;
   }
+  /* Keep the greeting to one compact line on phones so the departure time and the
+     Start button are visible without scrolling. */
   .greeting-art {
-    margin-right: 30px;
+    display: none;
   }
   .greeting h1 {
-    font-size: 2rem;
+    font-size: 1.65rem;
+  }
+  .greeting h1 br {
+    display: none;
+  }
+  .greeting p {
+    font-size: 0.9em;
+    margin-top: 2px;
   }
   .page-heading p {
     font-size: 0.85em;
@@ -1692,4 +1701,43 @@ legend {
   .large-text .primary-nav button svg {
     display: none;
   }
+}
+
+/* Family strip on the trip card — makes the daughter-and-father story visible on screen one. */
+.family-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1.5px solid #d8e4d2;
+  border-radius: 16px;
+  background: #f3f8ef;
+  color: #24402f;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.family-strip:hover {
+  background: #e9f3e3;
+}
+.family-strip > svg {
+  flex-shrink: 0;
+  color: #3e6b4f;
+}
+.family-strip span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.family-strip strong {
+  font-size: 0.95em;
+  line-height: 1.35;
+}
+.family-strip small {
+  color: #55705f;
+  font-size: 0.8em;
+  line-height: 1.4;
 }

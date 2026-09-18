@@ -71,10 +71,11 @@ const stepIcons: Record<string, LucideIcon> = {
 function App() {
   const [state, setState] = useState<Snapshot | null>(loadSnapshot);
   const [view, setView] = useState<View>("journey");
+  // Mandarin-first and large text by default: Mr Tan is the primary user, not the fallback.
   const [language, setLanguage] = useState<Language>(
-    () => loadSnapshot()?.language ?? "en",
+    () => loadSnapshot()?.language ?? "zh",
   );
-  const [large, setLarge] = useState(() => loadSnapshot()?.large ?? false);
+  const [large, setLarge] = useState(() => loadSnapshot()?.large ?? true);
   const [online, setOnline] = useState(navigator.onLine);
   const [simulateOffline, setSimulateOffline] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1111,6 +1112,27 @@ function App() {
                           {t("See the full route", "查看完整路线")}
                           <ChevronRight size={20} />
                         </button>
+                        <button
+                          className="family-strip"
+                          onClick={() => go("family")}
+                        >
+                          <HeartHandshake size={26} />
+                          <span>
+                            <strong>
+                              {t(
+                                "Mei Ling set this journey up for you",
+                                "这段行程由女儿美玲为您安排",
+                              )}
+                            </strong>
+                            <small>
+                              {t(
+                                "She can see how the trip is going — tap to view",
+                                "她可以看到行程进展 · 点击查看家人视角",
+                              )}
+                            </small>
+                          </span>
+                          <ChevronRight size={22} />
+                        </button>
                       </section>
                     ) : (
                       <section className="card guidance-card">
@@ -1239,7 +1261,9 @@ function App() {
                       <div>
                         <span className="status-dot" />
                         <strong>
-                          {t("Sample travel conditions", "示例路况")}
+                          {isDemo
+                            ? t("Sample travel conditions", "示例路况")
+                            : t("Live travel conditions", "实时路况")}
                         </strong>
                       </div>
                       <p>

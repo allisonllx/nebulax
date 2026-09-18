@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { MapPin, Route } from "lucide-react";
+import { isDemo } from "./journey";
 import type { Journey, Language } from "./journey";
 
 interface MapData {
@@ -169,10 +170,15 @@ export function RouteMap({
       <div className="map-caption">
         <MapPin size={16} />
         <span>
-          {t(
-            "Sample route · not for navigation",
-            "示例路线 · 不可用于实际导航",
-          )}
+          {isDemo
+            ? t(
+                "Sample route · not for navigation",
+                "示例路线 · 不可用于实际导航",
+              )
+            : t(
+                "Route overview · not for navigation",
+                "路线示意 · 不可用于实际导航",
+              )}
         </span>
       </div>
       {(failed || !data) && (
