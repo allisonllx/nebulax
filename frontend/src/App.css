@@ -1230,3 +1230,466 @@ legend {
 .active-heading {
   margin-bottom: 23px;
 }
+
+.primary-nav {
+  max-width: 1118px;
+  margin: 18px auto 0;
+  display: flex;
+  gap: 8px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border);
+}
+.primary-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  font-size: 17px;
+  font-weight: 600;
+  position: relative;
+}
+.primary-nav button[aria-current="page"] {
+  color: var(--green);
+  border-bottom-color: var(--green);
+  background: #edf2e7;
+  border-radius: 10px 10px 0 0;
+}
+.notification-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #a65d29;
+}
+.appointment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+}
+.appointment-form > label,
+.form-grid > label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 0.83em;
+  font-weight: 600;
+}
+.appointment-form input:not([type="checkbox"]),
+.appointment-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 60px;
+  padding: 13px 14px;
+  border: 1px solid #9bad95;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1em;
+  box-sizing: border-box;
+}
+.appointment-form input:focus-visible,
+.appointment-form select:focus-visible {
+  outline: 3px solid #aa6028;
+  outline-offset: 3px;
+}
+.appointment-form input:disabled,
+.appointment-form select:disabled {
+  background: #f2f3ee;
+  color: #52604f;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  min-width: 0;
+}
+.field-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.72em;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.saved-places {
+  background: #f3f5ed;
+  border: 1px solid var(--border);
+  padding: 20px;
+  border-radius: 16px;
+  display: grid;
+  gap: 20px;
+}
+.saved-places > div {
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+}
+.saved-places span {
+  display: block;
+  font-size: 0.67em;
+  color: var(--muted);
+}
+.saved-places strong {
+  display: block;
+  font-size: 0.83em;
+  margin-top: 4px;
+}
+.saved-places > p {
+  font-size: 0.68em;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  padding-top: 13px;
+}
+.appointment-note {
+  font-size: 0.76em;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  background: #f3f5ed;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+.local-demo-note {
+  font-size: 0.72em !important;
+  background: #f5efdd;
+  padding: 16px;
+  border-radius: 12px;
+  color: #65532f !important;
+  border: 1px solid #e0d4b4;
+}
+.role-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 6px;
+  background: #eef2e7;
+  border-radius: 13px;
+}
+.role-switch button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 0.72em;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+}
+.role-switch button[aria-pressed="true"] {
+  background: #fff;
+  border-color: #aebea4;
+  color: var(--green);
+  box-shadow: 0 2px 5px #20402008;
+}
+.family-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 0;
+}
+.family-empty > svg {
+  color: #698357;
+}
+.family-empty p {
+  font-size: 0.86em;
+  color: var(--muted);
+}
+.permission-options {
+  display: grid;
+  gap: 14px;
+}
+.permission-options legend {
+  font-size: 0.9em;
+}
+.permission-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8faf4;
+  cursor: pointer;
+  min-height: 78px;
+}
+.permission-option input {
+  appearance: none;
+  position: relative;
+  margin: 0;
+  flex-shrink: 0;
+  min-width: 32px;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #69835c;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+.permission-option input:checked {
+  background: #245640;
+  border-color: #245640;
+}
+.permission-option input:checked::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 23px;
+}
+.permission-option strong {
+  display: block;
+  font-size: 0.82em;
+}
+.permission-option small {
+  display: block;
+  font-size: 0.7em;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.sharing-heading {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.sharing-heading h2 {
+  overflow-wrap: anywhere;
+}
+.sharing-heading p {
+  font-size: 0.7em;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.person-avatar {
+  display: grid;
+  place-items: center;
+  background: #e6eeda;
+  border-radius: 50%;
+  height: 58px;
+  width: 58px;
+  flex-shrink: 0;
+  font-size: 25px;
+  color: var(--green);
+}
+.form-error {
+  font-size: 0.8em;
+  color: #853a29;
+  padding: 12px 0;
+}
+.danger-text {
+  color: #873c2c;
+}
+.danger-button {
+  display: flex;
+  justify-content: center;
+  padding: 16px 20px;
+  background: #873c2c;
+  color: #fff;
+  border: 0;
+  border-radius: 12px;
+  font-size: 0.87em;
+  min-height: 60px;
+  width: 100%;
+}
+.stop-sharing {
+  border: 1px solid #d5b7a9;
+  background: #faf0eb;
+  border-radius: 14px;
+  padding: 22px;
+  display: grid;
+  gap: 15px;
+}
+.stop-sharing p {
+  font-size: 0.8em;
+}
+.caregiver-trip {
+  border: 1px solid #ccdac2;
+  background: #f3f7ed;
+  border-radius: 15px;
+  padding: 22px;
+  display: grid;
+  gap: 13px;
+}
+.caregiver-trip .section-heading {
+  margin: 0;
+}
+.caregiver-trip > p {
+  font-size: 0.85em;
+}
+.caregiver-trip > strong {
+  font-size: 0.92em;
+}
+.caregiver-trip .field-hint {
+  font-size: 0.7em;
+}
+.permission-hidden {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  font-size: 0.82em;
+  color: var(--muted);
+  padding: 18px;
+  border: 1px dashed #b9c7af;
+  border-radius: 12px;
+}
+.suggestion-area {
+  display: grid;
+  gap: 20px;
+}
+.suggestion-note {
+  background: #eef4e5;
+  padding: 18px;
+  border-radius: 12px;
+  display: grid;
+  gap: 13px;
+  font-size: 0.86em;
+}
+.suggestion-note p {
+  font-size: 0.9em;
+}
+.proposal-review {
+  background: #f0f5e7;
+  border: 1px solid #c6d6b8;
+  border-radius: 17px;
+  padding: 22px;
+  display: grid;
+  gap: 20px;
+}
+.appointment-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.appointment-comparison > div {
+  border: 1px solid #d5decd;
+  border-radius: 12px;
+  background: white;
+  padding: 16px;
+  min-width: 0;
+}
+.appointment-comparison span,
+.appointment-comparison small {
+  display: block;
+  font-size: 0.68em;
+  color: var(--muted);
+}
+.appointment-comparison strong {
+  display: block;
+  font-size: 0.9em;
+  margin: 9px 0;
+}
+.appointment-comparison p {
+  font-size: 0.73em;
+  overflow-wrap: anywhere;
+  margin-top: 8px;
+}
+.family-suggestion-banner {
+  display: flex;
+  gap: 18px;
+  padding: 23px;
+  background: #edf3e6;
+  border: 1px solid #c2d0b4;
+  border-radius: 17px;
+  margin-bottom: 26px;
+}
+.family-suggestion-banner h2 {
+  font-size: 1.1rem;
+}
+.family-suggestion-banner p {
+  font-size: 0.8em;
+  margin: 10px 0 17px;
+}
+.family-suggestion-banner .secondary {
+  width: auto;
+  font-size: 0.78em;
+}
+.next-visit {
+  display: grid;
+  gap: 15px;
+  padding: 22px;
+  background: #eef4e5;
+  border: 1px solid #ccd9c2;
+  border-radius: 15px;
+}
+.next-visit p {
+  font-size: 0.84em;
+}
+.contact-actions {
+  display: grid;
+  gap: 15px;
+}
+.contact-actions a {
+  text-decoration: none;
+}
+@media (max-width: 800px) {
+  .primary-nav {
+    max-width: 596px;
+    margin: 12px 22px 0;
+    gap: 0;
+  }
+  .primary-nav button {
+    flex: 1;
+    padding: 12px 8px;
+    font-size: 15px;
+  }
+  .primary-nav button svg {
+    width: 18px;
+  }
+}
+@media (max-width: 420px) {
+  .primary-nav {
+    margin: 10px 16px 0;
+  }
+  .primary-nav button {
+    font-size: 14px;
+    gap: 6px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .appointment-panel,
+  .family-panel {
+    padding: 23px 18px;
+  }
+  .role-switch {
+    grid-template-columns: 1fr;
+  }
+  .role-switch button {
+    font-size: 0.8em;
+  }
+  .appointment-comparison {
+    grid-template-columns: 1fr;
+  }
+  .proposal-review {
+    padding: 18px;
+  }
+  .permission-option {
+    padding: 15px 12px;
+    gap: 12px;
+  }
+  .family-suggestion-banner {
+    padding: 18px;
+    gap: 12px;
+  }
+  .field-hint {
+    font-size: 0.76em;
+  }
+  .large-text .primary-nav button {
+    font-size: 14px;
+  }
+  .large-text .primary-nav button svg {
+    display: none;
+  }
+}

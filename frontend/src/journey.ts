@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+  appointmentSchema,
+  familySchema,
+  defaultAppointment,
+  defaultFamily,
+  appointmentInstant,
+} from "./profile";
+import type { Appointment } from "./profile";
 
 export type Language = "en" | "zh";
 export type Scenario = "normal" | "change" | "blocked";
@@ -199,12 +207,24 @@ export const demoJourney: Journey = {
 
 export function changedJourney(current: Journey): Journey {
   return {
-    ...demoJourney,
+    ...current,
     version: current.version + 1,
-    updatedAt: "2026-09-21T08:40:00+08:00",
+    updatedAt: new Date(
+      new Date(current.updatedAt).valueOf() + 10 * 60000,
+    ).toISOString(),
     arrivalWindow: {
-      earliest: "2026-09-21T09:43:00+08:00",
-      latest: "2026-09-21T09:53:00+08:00",
+      earliest: new Date(
+        new Date(current.arrivalWindow.earliest).valueOf() +
+          (current.alerts.some((alert) => alert.id === "demo-closure")
+            ? 0
+            : 8 * 60000),
+      ).toISOString(),
+      latest: new Date(
+        new Date(current.arrivalWindow.latest).valueOf() +
+          (current.alerts.some((alert) => alert.id === "demo-closure")
+            ? 0
+            : 8 * 60000),
+      ).toISOString(),
     },
     steps: demoJourney.steps.map((step) =>
       step.id !== "hospital-walk"
@@ -265,9 +285,23 @@ async function request(path: string, body: unknown) {
   if (!response.ok) throw new Error(`Request failed (${response.status})`);
   return response.json() as Promise<unknown>;
 }
+export function requestForAppointment(appointment: Appointment): PlanRequest {
+  return { ...planRequest, arriveBy: appointmentInstant(appointment) };
+}
+function demoPlan(input: PlanRequest): Journey {
+  const appointmentTime = new Date(input.arriveBy).valueOf();
+  const before = (minutes: number) =>
+    new Date(appointmentTime - minutes * 60000).toISOString();
+  return {
+    ...demoJourney,
+    updatedAt: before(90),
+    departureTime: before(75),
+    arrivalWindow: { earliest: before(25), latest: before(15) },
+  };
+}
 export async function planJourney(input: PlanRequest): Promise<Journey> {
   return journeySchema.parse(
-    isDemo ? demoJourney : await request("/journeys/plan", input),
+    isDemo ? demoPlan(input) : await request("/journeys/plan", input),
   );
 }
 export async function refreshJourney(
@@ -308,6 +342,9 @@ const snapshotSchema = z
     large: z.boolean(),
     blocked: z.boolean(),
     proposal: journeySchema.nullable(),
+    appointment: appointmentSchema.default(defaultAppointment),
+    family: familySchema.default(defaultFamily),
+    progressUpdatedAt: z.string().datetime().nullable().default(null),
   })
   .refine((value) => value.stepIndex < value.journey.steps.length);
 export type Snapshot = z.infer<typeof snapshotSchema>;
@@ -322,11 +359,9 @@ export function loadSnapshot(): Snapshot | null {
 }
 export function saveSnapshot(value: Snapshot): boolean {
   try {
-    localStorage.setItem(
-      storageKey,
-      JSON.stringify(snapshotSchema.parse(value)),
-    );
-    return localStorage.getItem(storageKey) === JSON.stringify(value);
+    const normalized = JSON.stringify(snapshotSchema.parse(value));
+    localStorage.setItem(storageKey, normalized);
+    return localStorage.getItem(storageKey) === normalized;
   } catch {
     return false;
   }

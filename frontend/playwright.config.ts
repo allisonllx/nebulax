@@ -6,7 +6,7 @@ export default defineConfig({
   projects: [
     {
       name: "demo",
-      testMatch: "journey.spec.ts",
+      testMatch: ["journey.spec.ts", "family.spec.ts"],
       use: { baseURL: "http://127.0.0.1:4173" },
     },
     {

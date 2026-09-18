@@ -62,3 +62,42 @@ test("malformed live data is rejected rather than replaced with a demo journey",
     page.getByRole("button", { name: "Prepare journey", exact: true }),
   ).toBeVisible();
 });
+
+test("failed appointment replanning keeps the saved appointment and draft separate", async ({
+  page,
+}) => {
+  let count = 0;
+  const bodies: unknown[] = [];
+  await page.route("**/api/journeys/plan", async (route) => {
+    bodies.push(route.request().postDataJSON());
+    count++;
+    if (count === 1) await route.fulfill({ json: plan });
+    else await route.fulfill({ status: 503, body: "Routing unavailable" });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Appointment", exact: true }).click();
+  await page.getByLabel("Appointment time", { exact: true }).fill("11:30");
+  await page
+    .getByRole("button", { name: "Save appointment and plan", exact: true })
+    .click();
+  await expect(
+    page.getByText("Unable to check the journey", { exact: true }),
+  ).toBeVisible();
+  expect(bodies.at(-1)).toEqual({
+    origin: "saved-home",
+    destination: "ttsh-entrance",
+    arriveBy: "2026-09-21T11:30:00+08:00",
+    stepFree: true,
+    walkingSpeedFactor: 0.6,
+  });
+  await expect(
+    page.getByLabel("Appointment time", { exact: true }),
+  ).toHaveValue("11:30");
+  await page.getByRole("button", { name: "My journey", exact: true }).click();
+  await expect(page.getByText("9:35–9:45", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Appointment", exact: true }).click();
+  await expect(
+    page.getByLabel("Appointment time", { exact: true }),
+  ).toHaveValue("10:00");
+});

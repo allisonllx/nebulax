@@ -17,6 +17,8 @@ Open http://localhost:5173. No backend is needed in default demo mode.
 - Route-change review and explicit acceptance, plus a no-accessible-route help state.
 - Saved progress and production-build offline reopening.
 - “Demo scenarios” controls at the bottom of the page.
+- Appointment date/time, notes, and explicitly prepared fortnightly visits.
+- Local caregiver preview, separate consent scopes, pending suggestions, acceptance/rejection and revocation.
 
 All travel conditions and route overlays are sample data, not verified navigation. Caregiver accounts, voice questions, live monitoring and notifications are not implemented.
 
@@ -36,7 +38,9 @@ See the [minimum API contract](../docs/minimum-api-contract.md) and [JSON exampl
 
 Set `VITE_API_MODE=live` in `.env.local` and restart/rebuild to use the two API endpoints. Development `/api` requests proxy to http://127.0.0.1:8000. Configure API routing separately for deployment. Live failures never fall back to demo data.
 
-Appointment/place IDs are fixed demo inputs. Refresh is manual. Backend must verify routes and accessibility, independently of response validation.
+Place IDs remain fixed demo inputs. The appointment editor sends the selected date/time to the plan endpoint. Refresh is manual. Backend must verify routes and accessibility, independently of response validation.
+
+See the [appointment and family walkthrough](../docs/appointment-family-prototype.md). Family support is a local demonstration: no real account linking, cross-device sharing or notifications occur.
 
 ## Structure
 
@@ -44,6 +48,8 @@ Appointment/place IDs are fixed demo inputs. Refresh is manual. Backend must ver
 - `src/App.tsx`: journey flow and bilingual UI.
 - `src/RouteMap.tsx`: OSM background and route overlays.
 - `src/useSpeech.ts`: read-aloud and local-voice fallback.
+- `src/profile.ts`: appointment/permission schemas and recurrence helpers.
+- `src/AppointmentForm.tsx`, `src/AppointmentPanel.tsx`, `src/FamilyPanel.tsx`: appointment and family views.
 - `public/data/`: OSM extract and provenance.
 - `tests/`: journey and API browser tests.
 

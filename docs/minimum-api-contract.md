@@ -8,7 +8,7 @@ This is the small integration target for the current frontend. The larger [backe
 - Normal journey, a proposed alternative, no accessible route, and offline viewing.
 - Frontend owns language, read-aloud, local progress and offline saving.
 - Backend owns route generation, accessibility checks, timing and relevant conditions.
-- Caregiver accounts, shared progress, notifications and voice questions are deferred.
+- A local appointment editor and consent-based caregiver preview are implemented. Real caregiver accounts, cross-device sharing, notifications and voice questions remain deferred; see the [family prototype notes](appointment-family-prototype.md).
 
 The frontend defaults to labelled demo data. Set `VITE_API_MODE=live` and restart/rebuild to use the API. Failures in live mode never fall back silently to demo data.
 
@@ -26,7 +26,7 @@ The frontend defaults to labelled demo data. Set `VITE_API_MODE=live` and restar
 }
 ```
 
-The saved place identifiers and appointment are fixed demo inputs for now. Agree their actual coordinates/entrance with backend before real integration; this prototype has no appointment editor.
+Saved place identifiers remain fixed demo inputs. The appointment editor supplies the selected date/time through `arriveBy`; repeat schedule and notes are stored locally. Agree the places' actual coordinates/entrance with backend before real integration.
 
 Response: [complete plan example](api-examples/plan.json).
 

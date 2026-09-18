@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   CheckCheck,
+  CalendarDays,
   ChevronRight,
   CircleHelp,
   Clock3,
@@ -31,6 +32,7 @@ import {
   loadSnapshot,
   planJourney,
   planRequest,
+  requestForAppointment,
   refreshJourney,
   saveSnapshot,
   time,
@@ -38,9 +40,26 @@ import {
 import type { Language, Scenario, Snapshot } from "./journey";
 import { RouteMap } from "./RouteMap";
 import { useSpeech } from "./useSpeech";
+import { AppointmentPanel } from "./AppointmentPanel";
+import { FamilyPanel } from "./FamilyPanel";
+import {
+  appointmentLabel,
+  appointmentInstant,
+  defaultAppointment,
+  defaultFamily,
+  dialNumber,
+} from "./profile";
+import type { Appointment, Family } from "./profile";
 import "./App.css";
 
-type View = "journey" | "details" | "change" | "help" | "settings";
+type View =
+  | "journey"
+  | "details"
+  | "change"
+  | "help"
+  | "settings"
+  | "appointment"
+  | "family";
 const stepIcons: Record<string, LucideIcon> = {
   walk: Footprints,
   train: TrainFront,
@@ -61,6 +80,10 @@ function App() {
   const [saved, setSaved] = useState(false);
   const [shellReady, setShellReady] = useState(false);
   const [notice, setNotice] = useState("");
+  const stateRef = useRef(state);
+  useLayoutEffect(() => {
+    stateRef.current = state;
+  }, [state]);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const offline = !online || simulateOffline;
   const t = (en: string, zh: string) => (language === "en" ? en : zh);
@@ -121,6 +144,9 @@ function App() {
             large: false,
             blocked: false,
             proposal: null,
+            appointment: defaultAppointment,
+            family: defaultFamily,
+            progressUpdatedAt: null,
           });
       })
       .catch(() => {
@@ -135,14 +161,19 @@ function App() {
     setView(nextView);
     setNotice("");
     window.scrollTo({ top: 0, behavior: "instant" });
-    requestAnimationFrame(() => headingRef.current?.focus());
+    requestAnimationFrame(() => {
+      const heading = document.querySelector<HTMLHeadingElement>("#main h1");
+      heading?.focus();
+    });
   }
   async function prepare() {
     if (offline) return;
     setBusy(true);
     setError("");
     try {
-      const result = await planJourney(planRequest);
+      const result = await planJourney(
+        requestForAppointment(state?.appointment ?? defaultAppointment),
+      );
       setState({
         schemaVersion: 1,
         journey: result,
@@ -152,7 +183,87 @@ function App() {
         large,
         blocked: false,
         proposal: null,
+        appointment: state?.appointment ?? defaultAppointment,
+        family: state?.family ?? defaultFamily,
+        progressUpdatedAt: null,
       });
+    } catch {
+      setError("load");
+    } finally {
+      setBusy(false);
+    }
+  }
+  function updateFamily(family: Family): boolean {
+    const current = stateRef.current;
+    if (!current) return false;
+    const next = { ...current, family, language, large };
+    if (!saveSnapshot(next)) {
+      setError("save");
+      return false;
+    }
+    setState(next);
+    return true;
+  }
+  async function updateAppointment(
+    candidate: Appointment,
+    fromCaregiver = false,
+  ) {
+    const current = stateRef.current;
+    if (!current || current.phase === "active" || offline || busy) return;
+    if (
+      fromCaregiver &&
+      (!current.family.linked ||
+        !current.family.scopes.prepareAppointments ||
+        !current.family.proposal ||
+        current.family.proposal.baseRevision !== current.appointment.revision)
+    ) {
+      setNotice(
+        t(
+          "This suggestion is no longer available. Please ask for a new one.",
+          "此建议已失效。请重新提出建议。",
+        ),
+      );
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const planned = await planJourney(requestForAppointment(candidate));
+      if (stateRef.current !== current) {
+        setNotice(
+          t(
+            "Your journey changed while planning. Please review and try again.",
+            "规划期间行程已更改。请检查后重试。",
+          ),
+        );
+        return;
+      }
+      const next: Snapshot = {
+        ...current,
+        journey: planned,
+        appointment: {
+          ...candidate,
+          revision: current.appointment.revision + 1,
+        },
+        phase: "planned",
+        stepIndex: 0,
+        blocked: false,
+        proposal: null,
+        progressUpdatedAt: null,
+        language,
+        large,
+        family: {
+          ...current.family,
+          proposal: null,
+          review: fromCaregiver ? "accepted" : null,
+        },
+      };
+      if (!saveSnapshot(next)) {
+        setError("save");
+        return;
+      }
+      setState(next);
+      go("journey");
     } catch {
       setError("load");
     } finally {
@@ -227,13 +338,30 @@ function App() {
     go("journey");
   }
   function advance() {
-    if (!state || state.blocked || state.proposal) return;
-    if (state.phase === "planned") setState({ ...state, phase: "active" });
+    if (!state || state.blocked || state.proposal || busy) return;
+    if (state.phase === "planned")
+      setState({
+        ...state,
+        phase: "active",
+        progressUpdatedAt: new Date().toISOString(),
+      });
     else if (state.stepIndex < state.journey.steps.length - 1)
-      setState({ ...state, stepIndex: state.stepIndex + 1 });
-    else setState({ ...state, phase: "arrived" });
+      setState({
+        ...state,
+        stepIndex: state.stepIndex + 1,
+        progressUpdatedAt: new Date().toISOString(),
+      });
+    else
+      setState({
+        ...state,
+        phase: "arrived",
+        progressUpdatedAt: new Date().toISOString(),
+      });
     window.scrollTo({ top: 0, behavior: "instant" });
-    requestAnimationFrame(() => headingRef.current?.focus());
+    requestAnimationFrame(() => {
+      const heading = document.querySelector<HTMLHeadingElement>("#main h1");
+      heading?.focus();
+    });
   }
   const listen = (text: string) => (
     <button className="listen-button" onClick={() => speech.speak(text)}>
@@ -294,14 +422,48 @@ function App() {
         <span className="demo-dot" />
         {isDemo
           ? t(
-              "Demo journey · Monday, 21 September 2026 · Sample conditions",
-              "演示行程 · 2026年9月21日，星期一 · 示例路况",
+              "Local demo · Sample journeys and family support",
+              "本地演示 · 示例行程与家属支持",
             )
           : t(
               "Connected to journey API · route verification required",
               "已连接行程服务 · 路线仍需核实",
             )}
       </div>
+      {state && (
+        <nav
+          className="primary-nav"
+          aria-label={t("Main navigation", "主要导航")}
+        >
+          <button
+            aria-current={view === "journey" ? "page" : undefined}
+            onClick={() => go("journey")}
+          >
+            <Route size={20} />
+            {t("My journey", "我的行程")}
+          </button>
+          <button
+            aria-current={view === "appointment" ? "page" : undefined}
+            onClick={() => go("appointment")}
+          >
+            <CalendarDays size={20} />
+            {t("Appointment", "预约")}
+          </button>
+          <button
+            aria-current={view === "family" ? "page" : undefined}
+            onClick={() => go("family")}
+          >
+            <HeartHandshake size={20} />
+            {t("Family", "家属")}
+            {state.family.proposal && (
+              <span
+                className="notification-dot"
+                aria-label={t("Suggestion waiting", "有待确认建议")}
+              />
+            )}
+          </button>
+        </nav>
+      )}
       <main id="main" className="main-shell">
         {back}
         {state?.phase === "active" && view === "journey" && (
@@ -346,17 +508,19 @@ function App() {
             <div>
               <strong>
                 {error === "save"
-                  ? t(
-                      "Could not save the updated route",
-                      "无法保存更新后的路线",
-                    )
+                  ? t("Could not save your changes", "无法保存更改")
                   : t("Unable to check the journey", "暂时无法检查行程")}
               </strong>
               <p>
-                {t(
-                  "Please try again when connected. Any saved instructions remain available.",
-                  "连接网络后请重试。已保存的指引仍可查看。",
-                )}
+                {error === "save"
+                  ? t(
+                      "Storage may be full or unavailable. Your previously saved journey has been kept.",
+                      "存储空间可能已满或不可用。原先保存的行程会保留。",
+                    )
+                  : t(
+                      "Please try again when connected. Any saved instructions remain available.",
+                      "连接网络后请重试。已保存的指引仍可查看。",
+                    )}
               </p>
             </div>
           </div>
@@ -404,7 +568,61 @@ function App() {
         )}
         {state && journey && step && (
           <>
-            {view === "settings" ? (
+            {state.family.linked &&
+              state.family.proposal &&
+              state.family.scopes.prepareAppointments &&
+              view === "journey" && (
+                <section className="family-suggestion-banner">
+                  <HeartHandshake size={26} />
+                  <div>
+                    <h2>
+                      {t(
+                        `${state.family.proposal.author} prepared an appointment suggestion`,
+                        `${state.family.proposal.author}准备了一项预约建议`,
+                      )}
+                    </h2>
+                    <p>
+                      {t(
+                        "Your saved journey has not changed.",
+                        "您已保存的行程尚未更改。",
+                      )}
+                    </p>
+                    <button
+                      className="secondary"
+                      onClick={() => go("appointment")}
+                    >
+                      {t("Review suggestion", "查看建议")}
+                      <ArrowRight size={21} />
+                    </button>
+                  </div>
+                </section>
+              )}
+            {view === "family" ? (
+              <FamilyPanel
+                snapshot={state}
+                language={language}
+                onUpdate={updateFamily}
+                onReview={() => go("appointment")}
+                onRead={speech.speak}
+                speaking={speech.speaking}
+              />
+            ) : view === "appointment" ? (
+              <AppointmentPanel
+                snapshot={state}
+                language={language}
+                busy={busy}
+                offline={offline}
+                onSave={updateAppointment}
+                onAccept={(candidate) => updateAppointment(candidate, true)}
+                onDecline={() =>
+                  updateFamily({
+                    ...state.family,
+                    proposal: null,
+                    review: "declined",
+                  })
+                }
+              />
+            ) : view === "settings" ? (
               <section className="standalone-card">
                 <span className="eyebrow">
                   {t("MAKE IT COMFORTABLE", "适合您的设置")}
@@ -502,10 +720,48 @@ function App() {
                     </p>
                   </div>
                 </div>
+                {state.family.linked && state.family.phone ? (
+                  <div className="contact-actions">
+                    <h2>
+                      {t(
+                        `Contact ${state.family.name}`,
+                        `联系${state.family.name}`,
+                      )}
+                    </h2>
+                    <a
+                      className="secondary"
+                      href={`tel:${dialNumber(state.family.phone)}`}
+                    >
+                      {t(
+                        `Call ${state.family.name}`,
+                        `致电${state.family.name}`,
+                      )}
+                      <ArrowRight size={22} />
+                    </a>
+                    <a
+                      className="secondary"
+                      href={`sms:${dialNumber(state.family.phone)}`}
+                    >
+                      {t("Open a text message", "打开短信")}
+                      <ArrowRight size={22} />
+                    </a>
+                    <p className="field-hint">
+                      {t(
+                        "Your phone app opens. You choose whether to call or send; cellular service is needed.",
+                        "将打开手机应用。由您选择是否拨打或发送；需要移动网络信号。",
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                  <button className="secondary" onClick={() => go("family")}>
+                    {t("Set up a family contact", "设置家属联系方式")}
+                    <ArrowRight size={22} />
+                  </button>
+                )}
                 <p className="muted">
                   {t(
-                    "No caregiver is linked in this prototype. No help request has been sent.",
-                    "此原型尚未连接家属。未发送求助信息。",
+                    "No help request has been sent. Ask station staff if you cannot reach someone.",
+                    "未发送求助信息。如果无法联系家人，请向车站工作人员求助。",
                   )}
                 </p>
                 <button className="primary" onClick={() => go("journey")}>
@@ -554,8 +810,8 @@ function App() {
                       <Clock3 size={22} />
                       <p>
                         {t(
-                          "8 more minutes in this demo. Appointment: 10:00 am.",
-                          "此演示增加8分钟。预约时间：上午10点。",
+                          `8 more minutes in this demo. Appointment: ${time(appointmentInstant(state.appointment))}.`,
+                          `此演示增加8分钟。预约时间：${time(appointmentInstant(state.appointment))}。`,
                         )}
                       </p>
                     </div>
@@ -660,7 +916,7 @@ function App() {
                   <Hospital />
                   <div>
                     <h2>{t("Tan Tock Seng Hospital", "陈笃生医院")}</h2>
-                    <p>{t("Appointment at 10:00 am", "预约时间：上午10点")}</p>
+                    <p>{appointmentLabel(state.appointment, language)}</p>
                   </div>
                 </div>
                 <p className="muted">
@@ -767,19 +1023,22 @@ function App() {
                             <h2>{t("Tan Tock Seng Hospital", "陈笃生医院")}</h2>
                             <p>
                               {t(
-                                "Monday, 21 September · 10:00 am",
-                                "9月21日，星期一 · 上午10点",
+                                appointmentLabel(state.appointment, "en"),
+                                appointmentLabel(state.appointment, "zh"),
                               )}
                             </p>
                           </div>
                         </div>
+                        {state.appointment.note && (
+                          <p className="appointment-note">
+                            <CalendarDays size={18} />
+                            {state.appointment.note}
+                          </p>
+                        )}
                         <div className="departure-panel">
                           <div>
                             <span>{t("Leave home at", "出发时间")}</span>
-                            <strong>
-                              {time(journey.departureTime)}
-                              <small> am</small>
-                            </strong>
+                            <strong>{time(journey.departureTime)}</strong>
                           </div>
                           <span className="departure-arrow">
                             <ArrowRight size={26} />
@@ -791,8 +1050,8 @@ function App() {
                             </strong>
                             <small>
                               {t(
-                                "Before your 10:00 appointment",
-                                "在上午10点预约之前",
+                                `Appointment at ${time(appointmentInstant(state.appointment))}`,
+                                `预约时间：${time(appointmentInstant(state.appointment))}`,
                               )}
                             </small>
                           </div>
@@ -809,7 +1068,9 @@ function App() {
                         </div>
                         <button
                           className="primary"
-                          disabled={state.blocked || Boolean(state.proposal)}
+                          disabled={
+                            busy || state.blocked || Boolean(state.proposal)
+                          }
                           onClick={advance}
                         >
                           {t("Start journey", "开始行程")}
@@ -900,7 +1161,9 @@ function App() {
                         )}
                         <button
                           className="primary"
-                          disabled={state.blocked || Boolean(state.proposal)}
+                          disabled={
+                            busy || state.blocked || Boolean(state.proposal)
+                          }
                           onClick={advance}
                         >
                           {step.confirmation[language]}
