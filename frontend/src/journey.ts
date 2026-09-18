@@ -18,7 +18,7 @@ const geometry = z.object({
     z.object({
       type: z.literal("Feature"),
       properties: z.object({
-        mode: z.enum(["walk", "train"]),
+        mode: z.enum(["walk", "train", "bus"]),
         affected: z.boolean().optional(),
       }),
       geometry: z.object({
@@ -43,7 +43,7 @@ export const journeySchema = z.object({
     .array(
       z.object({
         id: z.string(),
-        mode: z.enum(["walk", "train", "lift"]),
+        mode: z.enum(["walk", "train", "bus", "lift"]),
         instruction: bilingual,
         detail: bilingual,
         confirmation: bilingual,

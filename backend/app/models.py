@@ -21,7 +21,7 @@ class Place(ApiModel):
     name: Text
 
 
-Mode = Literal["walk", "bus", "mrt"]
+Mode = Literal["walk", "bus", "train"]
 
 
 class Step(ApiModel):
@@ -31,6 +31,10 @@ class Step(ApiModel):
     line: str | None = None
     service: str | None = None
     instruction: Text
+    detail: Text
+    confirmation: Text
+    place: Text
+    duration_minutes: int = 0
     duration_seconds: int | None = None
     distance_metres: int | None = None
     step_free: Literal["verified", "unverified", "blocked"] = "unverified"
@@ -98,6 +102,8 @@ class HelpAction(ApiModel):
 
 class RefreshResponse(ApiModel):
     result: Literal["unchanged", "replacement_available", "no_accessible_route"]
+    # Alias kept in sync with `result` — the deployed frontend discriminates on `status`.
+    status: Literal["unchanged", "replacement_available", "no_accessible_route"] | None = None
     checked_at: datetime
     data_freshness: Literal["fresh", "unknown"] = "fresh"  # unknown = a feed failed; not an all-clear
     journey: Journey | None = None

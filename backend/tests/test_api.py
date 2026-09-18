@@ -61,7 +61,8 @@ def test_refresh_quiet_day_is_unchanged(client):
     r = client.post(f"/api/journeys/{trip['id']}/refresh", json={"version": trip["version"]})
 
     assert r.status_code == 200
-    assert r.json() == {"result": "unchanged", "checkedAt": r.json()["checkedAt"],
+    assert r.json() == {"result": "unchanged", "status": "unchanged",
+                        "checkedAt": r.json()["checkedAt"],
                         "dataFreshness": "fresh", "journey": None, "message": None,
                         "alerts": [], "helpActions": []}
 
@@ -77,7 +78,7 @@ def test_activating_the_disruption_scenario_changes_refresh_and_labels_it(client
     assert body["journey"]["dataMode"] == "simulated"
     assert body["journey"]["version"] == trip["version"] + 1
     modes = {s["mode"] for s in body["journey"]["steps"]}
-    assert "mrt" not in modes
+    assert "train" not in modes
 
 
 def test_scenarios_can_be_listed_and_deactivated(client):
@@ -125,3 +126,26 @@ def test_plan_attaches_current_warnings_to_the_journey(client):
 
     assert j["dataMode"] == "simulated"
     assert any(a["type"] == "weather" for a in j["alerts"])
+
+
+def test_journey_steps_carry_the_ui_fields(client):
+    j = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+
+    for step in j["steps"]:
+        assert step["mode"] in {"walk", "bus", "train"}
+        assert step["detail"]["en"] and step["detail"]["zh"]
+        assert step["confirmation"]["en"] and step["confirmation"]["zh"]
+        assert step["place"]["en"] and step["place"]["zh"]
+        assert isinstance(step["durationMinutes"], int) and step["durationMinutes"] >= 0
+    for feature in j["routeGeometry"]["features"]:
+        assert feature["properties"]["mode"] in {"walk", "bus", "train"}
+        assert isinstance(feature["properties"]["affected"], bool)
+
+
+def test_refresh_response_also_carries_status_alias(client):
+    trip = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+
+    r = client.post(f"/api/journeys/{trip['id']}/refresh", json={"version": trip["version"]})
+
+    body = r.json()
+    assert body["status"] == body["result"] == "unchanged"

@@ -23,7 +23,7 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
              facilities_raw: dict | None = None, weather_raw: dict | None = None) -> RefreshResponse:
     if train_alerts_raw is None:
         # A feed we could not read is unknown, never an all-clear.
-        return RefreshResponse(result="unchanged", checked_at=now, data_freshness="unknown")
+        return RefreshResponse(result="unchanged", status="unchanged", checked_at=now, data_freshness="unknown")
 
     candidates = [convert(raw, pace_factor=req.walking_speed_factor, origin=origin, destination=destination)
                   for raw in raw_itineraries]
@@ -32,7 +32,7 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
 
     current_alerts = conditions.train_alerts_for(current, train_alerts_raw, data_source=alerts_data_source)
     if not current_alerts:
-        return RefreshResponse(result="unchanged", checked_at=now,
+        return RefreshResponse(result="unchanged", status="unchanged", checked_at=now,
                                alerts=_side_alerts(current, facilities_raw, weather_raw,
                                                    origin, destination, alerts_data_source))
 
@@ -41,7 +41,7 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
                 if not conditions.train_alerts_for(c, train_alerts_raw, data_source=alerts_data_source)]
     if not feasible:
         return RefreshResponse(
-            result="no_accessible_route", checked_at=now,
+            result="no_accessible_route", status="no_accessible_route", checked_at=now,
             message=Text(en="We cannot find a usable route right now. Please call for help.",
                          zh="现在找不到可用的路线。请打电话求助。"),
             alerts=current_alerts,
@@ -55,11 +55,12 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
         props = {**feature["properties"], "role": "previous"}
         if props["legId"] in affected_leg_ids:
             props["status"] = "affected"
+            props["affected"] = True
         previous_features.append({**feature, "properties": props})
 
     extra_minutes = max(round((replacement.total_seconds - current.total_seconds) / 60), 0)
     summary = Text(en="The MRT is disrupted. Take the bus instead.", zh="地铁中断,请改搭巴士。")
-    if replacement.bus_services and not any(s.mode == "mrt" for s in replacement.steps):
+    if replacement.bus_services and not any(s.mode == "train" for s in replacement.steps):
         service = replacement.bus_services[0]
         summary = Text(en=f"The MRT is disrupted. Take bus {service} instead.",
                        zh=f"地铁中断,请改搭 {service} 号巴士。")
@@ -75,4 +76,4 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
                                summary=summary, reasons=reasons, extra_features=previous_features)
     journey.alerts = current_alerts + _side_alerts(replacement, facilities_raw, weather_raw,
                                                    origin, destination, alerts_data_source)
-    return RefreshResponse(result="replacement_available", checked_at=now, journey=journey)
+    return RefreshResponse(result="replacement_available", status="replacement_available", checked_at=now, journey=journey)

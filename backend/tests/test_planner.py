@@ -21,7 +21,7 @@ def build(transit, bus, **overrides):
 def test_recommends_the_fastest_candidate_on_a_normal_day(transit_itineraries, bus_itineraries):
     journey = build(transit_itineraries, bus_itineraries)
 
-    assert any(s.mode == "mrt" for s in journey.steps)  # rail beats the direct bus on time
+    assert any(s.mode == "train" for s in journey.steps)  # rail beats the direct bus on time
 
 
 def test_departure_is_backwards_from_the_appointment_with_a_buffer(transit_itineraries, bus_itineraries):

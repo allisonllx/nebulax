@@ -36,7 +36,7 @@ def test_disruption_proposes_the_direct_bus_as_version_2(transit_itineraries, bu
     journey = out.journey
     assert journey.version == 2
     assert journey.id == "trip-001"
-    assert all(s.mode != "mrt" for s in journey.steps)          # replacement avoids the broken line
+    assert all(s.mode != "train" for s in journey.steps)          # replacement avoids the broken line
     assert journey.data_mode == "simulated"                      # simulated alert -> labelled journey
     assert any(a.type == "train_disruption" for a in journey.alerts)
 

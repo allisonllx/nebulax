@@ -15,6 +15,7 @@ import {
   Hospital,
   Leaf,
   ArrowUpDown as Lift,
+  BusFront,
   MapPin,
   RefreshCw,
   Route,
@@ -63,6 +64,7 @@ type View =
 const stepIcons: Record<string, LucideIcon> = {
   walk: Footprints,
   train: TrainFront,
+  bus: BusFront,
   lift: Lift,
 };
 

@@ -8,6 +8,8 @@ COPY frontend/ ./
 # restrict it to our domains in the MapTiler dashboard instead).
 ARG VITE_MAPTILER_KEY
 ENV VITE_MAPTILER_KEY=$VITE_MAPTILER_KEY
+# The deployed app always talks to the real backend; demo fallback is for offline frontend dev only.
+ENV VITE_API_MODE=live
 RUN npm run build
 
 # Stage 2: run FastAPI, serving /api and the built frontend

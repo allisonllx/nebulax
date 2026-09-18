@@ -6,7 +6,7 @@ from app.models import Place, Step, Text
 from app.reference import canonical_line, station_name
 from app.services import instructions
 
-_MODES = {"WALK": "walk", "BUS": "bus", "SUBWAY": "mrt", "TRAM": "mrt", "RAIL": "mrt"}
+_MODES = {"WALK": "walk", "BUS": "bus", "SUBWAY": "train", "TRAM": "train", "RAIL": "train"}
 
 
 @dataclass
@@ -77,7 +77,8 @@ def convert(raw: dict, *, pace_factor: float, origin: Place, destination: Place)
         total += seconds
         leg_id = f"leg-{n}"
         to_name, to_is_station = _place_name(leg["to"], origin, destination)
-        line = canonical_line(leg.get("route")) if mode == "mrt" else None
+        from_name, _ = _place_name(leg["from"], origin, destination)
+        line = canonical_line(leg.get("route")) if mode == "train" else None
         service = leg.get("route") if mode == "bus" else None
         station_codes: list[str] = []
 
@@ -96,22 +97,35 @@ def convert(raw: dict, *, pace_factor: float, origin: Place, destination: Place)
                      else Text(en="Take the train.", zh="搭地铁。"),
                      instructions.alight_train(len(passed) + 1, to_name, to_code)]
 
+        minutes = max(round(seconds / 60), 1)
         step_ids = []
         for i, text in enumerate(texts):
             step_id = f"step-{len(steps) + 1}"
             step_ids.append(step_id)
             is_last = i == len(texts) - 1
+            is_board = mode != "walk" and i == 0
+            place = from_name if is_board else to_name
+            if mode == "walk":
+                confirmation = Text(en="Ask a passer-by if you are unsure of the way.",
+                                    zh="如果不确定方向,请向路人求助。")
+            else:
+                confirmation = Text(en=f"Check the sign says {place.en} before continuing.",
+                                    zh=f"继续前,请确认指示牌写着“{place.zh}”。")
             steps.append(Step(
                 id=step_id, leg_id=leg_id, mode=mode, line=line, service=service, instruction=text,
+                detail=Text(en=f"{from_name.en} → {to_name.en}", zh=f"{from_name.zh} → {to_name.zh}"),
+                confirmation=confirmation, place=place,
+                # Riding time sits on the boarding step; stepping off takes no extra minutes.
+                duration_minutes=minutes if (mode == "walk" or is_board) else 0,
                 duration_seconds=seconds if is_last else None,  # the leg's time sits on its final step
                 distance_metres=round(leg["distance"]) if mode == "walk" else None,
-                connectivity="tunnel" if mode == "mrt" else "online",
+                connectivity="tunnel" if mode == "train" else "online",
             ))
         features.append({
             "type": "Feature",
             "properties": {"legId": leg_id, "role": "recommended", "mode": mode, "line": line,
-                           "service": service, "status": "normal", "stepIds": step_ids,
-                           "stationCodes": station_codes},
+                           "service": service, "status": "normal", "affected": False,
+                           "stepIds": step_ids, "stationCodes": station_codes},
             "geometry": {"type": "LineString", "coordinates": decode_polyline(leg["legGeometry"]["points"])},
         })
 

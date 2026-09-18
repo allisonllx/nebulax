@@ -23,7 +23,7 @@ def test_transit_legs_keep_onemap_timing(mrt_itinerary):
 
     plan = convert(mrt_itinerary, pace_factor=0.6)
 
-    alight = [s for s in plan.steps if s.mode == "mrt"][-1]
+    alight = [s for s in plan.steps if s.mode == "train"][-1]
     assert alight.duration_seconds == onemap_seconds
 
 
@@ -37,7 +37,7 @@ def test_total_includes_waiting_time_and_slower_walking(mrt_itinerary):
 def test_boarding_and_alighting_are_separate_steps_on_one_map_leg(mrt_itinerary):
     plan = convert(mrt_itinerary, pace_factor=0.6)
 
-    mrt_steps = [s for s in plan.steps if s.mode == "mrt"]
+    mrt_steps = [s for s in plan.steps if s.mode == "train"]
     assert len(mrt_steps) == 2
     assert mrt_steps[0].leg_id == mrt_steps[1].leg_id
     feature = next(f for f in plan.features if f["properties"]["legId"] == mrt_steps[0].leg_id)
@@ -78,14 +78,14 @@ def test_bus_steps_carry_the_service_number(bus_itineraries):
 def test_mrt_steps_are_flagged_as_tunnel_for_offline_refresh(mrt_itinerary):
     plan = convert(mrt_itinerary, pace_factor=0.6)
 
-    assert {s.connectivity for s in plan.steps if s.mode == "mrt"} == {"tunnel"}
-    assert {s.connectivity for s in plan.steps if s.mode != "mrt"} == {"online"}
+    assert {s.connectivity for s in plan.steps if s.mode == "train"} == {"tunnel"}
+    assert {s.connectivity for s in plan.steps if s.mode != "train"} == {"online"}
 
 
 def test_instructions_are_bilingual_full_sentences(mrt_itinerary):
     plan = convert(mrt_itinerary, pace_factor=0.6)
 
-    alight = [s for s in plan.steps if s.mode == "mrt"][-1]
+    alight = [s for s in plan.steps if s.mode == "train"][-1]
     assert alight.instruction.en == "Ride 4 stops. Get off at Novena (NS20)."
     assert alight.instruction.zh == "坐 4 站,在诺维娜(NS20)下车。"
     last = plan.steps[-1]

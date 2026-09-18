@@ -32,7 +32,7 @@ def test_disruption_on_his_stations_names_the_affected_map_leg(mrt_itinerary):
 
     assert len(alerts) == 1
     alert = alerts[0]
-    mrt_leg_id = next(s.leg_id for s in plan.steps if s.mode == "mrt")
+    mrt_leg_id = next(s.leg_id for s in plan.steps if s.mode == "train")
     assert alert.affects_journey is True
     assert alert.affected_leg_ids == [mrt_leg_id]
     assert alert.line == "NSL"
