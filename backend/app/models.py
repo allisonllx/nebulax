@@ -66,6 +66,8 @@ class ArrivalWindow(ApiModel):
 
 class Journey(ApiModel):
     id: str
+    origin: Place | None = None
+    destination: Place | None = None
     version: int
     status: Literal["ready"] = "ready"
     data_mode: Literal["live", "simulated"]

@@ -199,3 +199,14 @@ def test_geocode_proxies_the_search_provider(client, monkeypatch):
     hit = r.json()["results"][0]
     assert hit == {"name": "Tan Tock Seng Hospital", "address": "11 Jalan Tan Tock Seng",
                    "lat": 1.3214, "lon": 103.8459}
+
+
+def test_journey_names_its_own_endpoints(client):
+    body = {**PLAN_BODY,
+            "origin": {"lat": 1.3521, "lon": 103.8198, "name": "Toa Payoh Hub"},
+            "destination": {"lat": 1.2996, "lon": 103.8455, "name": "Singapore General Hospital"}}
+
+    j = client.post("/api/journeys/plan", json=body).json()
+
+    assert j["origin"]["name"]["en"] == "Toa Payoh Hub"
+    assert j["destination"]["name"]["en"] == "Singapore General Hospital"

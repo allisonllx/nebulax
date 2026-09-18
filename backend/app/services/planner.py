@@ -36,7 +36,8 @@ def build_journey(req: PlanRequest, raw_itineraries: list[dict], *, origin: Plac
 
 def assemble(req: PlanRequest, plan: CandidatePlan, *, now: datetime, journey_id: str | None = None,
              version: int = 1, data_mode: str = "live", summary: Text | None = None,
-             reasons: list[Text] | None = None, extra_features: list[dict] | None = None) -> Journey:
+             reasons: list[Text] | None = None, extra_features: list[dict] | None = None,
+             origin: Place | None = None, destination: Place | None = None) -> Journey:
     latest_seconds = round(plan.total_seconds * PESSIMISM)
     departure = _round_down_5min(req.arrive_by - ARRIVAL_BUFFER - timedelta(seconds=latest_seconds))
     if summary is None:
@@ -47,6 +48,7 @@ def assemble(req: PlanRequest, plan: CandidatePlan, *, now: datetime, journey_id
         reasons = [_default_reason(plan)]
     return Journey(
         id=journey_id or f"trip-{uuid.uuid4().hex[:8]}",
+        origin=origin, destination=destination,
         version=version, data_mode=data_mode, updated_at=now,
         arrive_by=req.arrive_by, departure_time=departure,
         arrival_window=ArrivalWindow(earliest=departure + timedelta(seconds=plan.total_seconds),

@@ -29,8 +29,15 @@ const geometry = z.object({
   ),
 });
 
+const endpointSchema = z.object({
+  lat: z.number(),
+  lon: z.number(),
+  name: bilingual,
+});
 export const journeySchema = z.object({
   id: z.string(),
+  origin: endpointSchema.nullish(),
+  destination: endpointSchema.nullish(),
   version: z.number().int().positive(),
   status: z.literal("ready"),
   updatedAt: z.string().datetime({ offset: true }),

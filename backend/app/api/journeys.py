@@ -81,7 +81,8 @@ async def plan(req: PlanRequest) -> Journey:
     now = _now()
     ranked = planner.rank([convert(r, pace_factor=req.walking_speed_factor,
                                    origin=origin, destination=destination) for r in raw])
-    journey = planner.assemble(req, ranked[0], now=now, data_mode=data_mode)
+    journey = planner.assemble(req, ranked[0], now=now, data_mode=data_mode,
+                               origin=origin, destination=destination)
     STORE.put(journey.id, StoredJourney(request=req, raw_itineraries=raw, version=journey.version,
                                         created_at=now, chosen_index=0))
 
@@ -93,7 +94,8 @@ async def plan(req: PlanRequest) -> Journey:
         if modes in seen_modes or len(journey.alternatives) >= 2:
             continue
         seen_modes.add(modes)
-        alternative = planner.assemble(req, candidate, now=now, data_mode=data_mode)
+        alternative = planner.assemble(req, candidate, now=now, data_mode=data_mode,
+                                       origin=origin, destination=destination)
         STORE.put(alternative.id, StoredJourney(request=req, raw_itineraries=raw,
                                                 version=alternative.version, created_at=now,
                                                 chosen_index=index))

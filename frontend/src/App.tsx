@@ -40,7 +40,7 @@ import {
   time,
 } from "./journey";
 import type { Language, Scenario, Snapshot } from "./journey";
-import { RouteMap } from "./RouteMap";
+import { LiveMap } from "./LiveMap";
 import { useSpeech } from "./useSpeech";
 import { Onboarding, type SetupAnswers } from "./Onboarding";
 import { TripPlanner } from "./TripPlanner";
@@ -761,7 +761,7 @@ function App() {
                             )}
                       </small>
                     </div>
-                    <RouteMap journey={journey} language={language} />
+                    <LiveMap journey={journey} language={language} />
                   </>
                 ) : (
                   <div className="caregiver-status card">
@@ -1035,7 +1035,7 @@ function App() {
                       {t("Back to journey", "返回行程")}
                     </button>
                   </section>
-                  <RouteMap
+                  <LiveMap
                     journey={state.proposal}
                     original={journey}
                     language={language}
@@ -1098,7 +1098,7 @@ function App() {
                       </p>
                     </div>
                   </section>
-                  <RouteMap journey={journey} language={language} />
+                  <LiveMap journey={journey} language={language} />
                 </div>
               </>
             ) : state.phase === "arrived" ? (
@@ -1226,7 +1226,11 @@ function App() {
                             <span className="eyebrow">
                               {t("HOSPITAL APPOINTMENT", "医院预约")}
                             </span>
-                            <h2>{t("Tan Tock Seng Hospital", "陈笃生医院")}</h2>
+                            <h2>
+                              {journey.destination
+                                ? journey.destination.name[language]
+                                : t("Tan Tock Seng Hospital", "陈笃生医院")}
+                            </h2>
                             <p>
                               {t(
                                 appointmentLabel(state.appointment, "en"),
@@ -1286,25 +1290,43 @@ function App() {
                           <span className="route-dot" />
                           <div>
                             <strong>
-                              {t("Home, Ang Mo Kio", "家，宏茂桥")}
+                              {journey.origin
+                                ? journey.origin.name[language]
+                                : t("Home, Ang Mo Kio", "家，宏茂桥")}
                             </strong>
-                            <span>
-                              {t(
-                                "Walk → NS16 Ang Mo Kio",
-                                "步行 → NS16 宏茂桥",
-                              )}
-                            </span>
+                            <span>{journey.steps[0].instruction[language]}</span>
                           </div>
-                          <span className="rail-badge">NS</span>
+                          {journey.steps
+                            .filter(
+                              (item, index, all) =>
+                                item.mode !== "walk" &&
+                                all.findIndex(
+                                  (other) =>
+                                    other.mode === item.mode &&
+                                    (other.mode === "bus"
+                                      ? true
+                                      : other.id === item.id),
+                                ) === index,
+                            )
+                            .slice(0, 1)
+                            .map((item) => (
+                              <span key={item.id} className="rail-badge">
+                                {item.mode === "bus" ? t("BUS", "巴士") : "NS"}
+                              </span>
+                            ))}
                           <div>
                             <strong>
-                              {t("Novena → Hospital", "诺维娜 → 医院")}
+                              {journey.destination
+                                ? journey.destination.name[language]
+                                : t("Novena → Hospital", "诺维娜 → 医院")}
                             </strong>
                             <span>
-                              {t(
-                                "4 stops · no train changes",
-                                "4站 · 无需换乘地铁",
-                              )}
+                              {journey.transfers === 0
+                                ? t("No transfer", "不用换车")
+                                : t(
+                                    `${journey.transfers} transfer`,
+                                    `换乘 ${journey.transfers} 次`,
+                                  )}
                             </span>
                           </div>
                         </div>
@@ -1468,7 +1490,7 @@ function App() {
                     </div>
                   </div>
                   <aside className="journey-aside">
-                    <RouteMap journey={journey} language={language} />
+                    <LiveMap journey={journey} language={language} />
                     <div className="conditions-card">
                       <div>
                         <span className="status-dot" />

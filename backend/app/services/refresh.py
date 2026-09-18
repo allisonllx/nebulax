@@ -74,7 +74,8 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
 
     journey = planner.assemble(req, replacement, now=now, journey_id=journey_id,
                                version=current_version + 1, data_mode=data_mode,
-                               summary=summary, reasons=reasons, extra_features=previous_features)
+                               summary=summary, reasons=reasons, extra_features=previous_features,
+                               origin=origin, destination=destination)
     journey.alerts = current_alerts + _side_alerts(replacement, facilities_raw, weather_raw,
                                                    origin, destination, alerts_data_source)
     return RefreshResponse(result="replacement_available", status="replacement_available", checked_at=now, journey=journey)
