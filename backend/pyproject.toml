@@ -1,0 +1,9 @@
+[project]
+name = "nebulax-backend"
+version = "0.1.0"
+description = "FastAPI backend for NebulaX"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+]
