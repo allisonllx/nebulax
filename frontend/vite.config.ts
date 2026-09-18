@@ -7,7 +7,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "prompt",
+      // autoUpdate: a new deploy takes over on the next visit without asking —
+      // "prompt" left returning visitors stuck on the old bundle forever.
+      registerType: "autoUpdate",
       injectRegister: "script",
       includeAssets: ["data/neighbourhood.json", "favicon.svg"],
       manifest: {
