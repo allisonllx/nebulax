@@ -105,12 +105,13 @@ def convert(raw: dict, *, pace_factor: float, origin: Place, destination: Place)
             is_last = i == len(texts) - 1
             is_board = mode != "walk" and i == 0
             place = from_name if is_board else to_name
+            # The UI shows this as the confirm button he taps, so it is phrased as his own words.
             if mode == "walk":
-                confirmation = Text(en="Ask a passer-by if you are unsure of the way.",
-                                    zh="如果不确定方向,请向路人求助。")
+                confirmation = Text(en=f"I have reached {to_name.en}", zh=f"我到了{to_name.zh}")
+            elif is_board:
+                confirmation = Text(en="I am on board", zh="我已上车")
             else:
-                confirmation = Text(en=f"Check the sign says {place.en} before continuing.",
-                                    zh=f"继续前,请确认指示牌写着“{place.zh}”。")
+                confirmation = Text(en=f"I have alighted at {to_name.en}", zh=f"我在{to_name.zh}下车了")
             steps.append(Step(
                 id=step_id, leg_id=leg_id, mode=mode, line=line, service=service, instruction=text,
                 detail=Text(en=f"{from_name.en} → {to_name.en}", zh=f"{from_name.zh} → {to_name.zh}"),

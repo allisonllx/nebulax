@@ -41,6 +41,7 @@ import {
 import type { Language, Scenario, Snapshot } from "./journey";
 import { RouteMap } from "./RouteMap";
 import { useSpeech } from "./useSpeech";
+import { Onboarding, type SetupAnswers } from "./Onboarding";
 import { AppointmentPanel } from "./AppointmentPanel";
 import { FamilyPanel } from "./FamilyPanel";
 import {
@@ -76,6 +77,14 @@ function App() {
     () => loadSnapshot()?.language ?? "zh",
   );
   const [large, setLarge] = useState(() => loadSnapshot()?.large ?? true);
+  // Two audiences, one app: Mr Tan gets guidance only; family gets the fuller controls.
+  const [personaMode, setPersonaMode] = useState<"elder" | "caregiver">(() => {
+    try {
+      return localStorage.getItem("nebulax:mode") === "caregiver" ? "caregiver" : "elder";
+    } catch {
+      return "elder";
+    }
+  });
   const [online, setOnline] = useState(navigator.onLine);
   const [simulateOffline, setSimulateOffline] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -101,6 +110,33 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = language === "en" ? "en-SG" : "zh-SG";
   }, [language]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("nebulax:mode", personaMode);
+    } catch {
+      /* storage may be unavailable; the mode simply resets next visit */
+    }
+  }, [personaMode]);
+  // Read each active step aloud when he asked for voice during setup.
+  useEffect(() => {
+    if (!state || state.phase !== "active" || personaMode !== "elder") return;
+    let voicePref = "both";
+    try {
+      voicePref = localStorage.getItem("nebulax:voice") ?? "both";
+    } catch {
+      /* default to voice on */
+    }
+    if (voicePref === "text" || !("speechSynthesis" in window)) return;
+    const current = state.journey.steps[state.stepIndex];
+    const utterance = new SpeechSynthesisUtterance(
+      language === "en" ? current.instruction.en : current.instruction.zh,
+    );
+    utterance.lang = language === "en" ? "en-SG" : "zh-CN";
+    utterance.rate = 0.85;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.phase, state?.stepIndex, personaMode]);
   useEffect(() => {
     const connected = () => setOnline(true);
     const disconnected = () => setOnline(false);
@@ -132,33 +168,47 @@ function App() {
     // eslint-disable-next-line react/set-state-in-effect
     if (state) setSaved(saveSnapshot({ ...state, language, large }));
   }, [state, language, large]);
-  useEffect(() => {
-    if (loadSnapshot() || !navigator.onLine) return;
-    let cancelled = false;
-    planJourney(planRequest)
-      .then((result) => {
-        if (!cancelled)
-          setState({
-            schemaVersion: 1,
-            journey: result,
-            stepIndex: 0,
-            phase: "planned",
-            language: "en",
-            large: false,
-            blocked: false,
-            proposal: null,
-            appointment: defaultAppointment,
-            family: defaultFamily,
-            progressUpdatedAt: null,
-          });
-      })
-      .catch(() => {
-        if (!cancelled) setError("load");
+  async function finishSetup(answers: SetupAnswers) {
+    setBusy(true);
+    setError("");
+    try {
+      localStorage.setItem("nebulax:voice", answers.voice);
+    } catch {
+      /* fine — read-aloud stays on by default */
+    }
+    try {
+      const result = await planJourney({
+        ...planRequest,
+        walkingSpeedFactor: answers.paceFactor,
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      setState({
+        schemaVersion: 1,
+        journey: result,
+        stepIndex: 0,
+        phase: "planned",
+        language,
+        large: true,
+        blocked: false,
+        proposal: null,
+        appointment: defaultAppointment,
+        family: {
+          ...defaultFamily,
+          linked: answers.shareWithFamily,
+          scopes: {
+            tripUpdates: answers.shareWithFamily,
+            prepareAppointments: answers.shareWithFamily,
+          },
+          consentedAt: answers.shareWithFamily ? new Date().toISOString() : null,
+        },
+        progressUpdatedAt: null,
+      });
+      setPersonaMode("elder");
+    } catch {
+      setError("load");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function go(nextView: View) {
     setView(nextView);
@@ -433,7 +483,7 @@ function App() {
               "已连接行程服务 · 路线仍需核实",
             )}
       </div>
-      {state && (
+      {state && personaMode === "caregiver" && (
         <nav
           className="primary-nav"
           aria-label={t("Main navigation", "主要导航")}
@@ -443,7 +493,7 @@ function App() {
             onClick={() => go("journey")}
           >
             <Route size={20} />
-            {t("My journey", "我的行程")}
+            {t("Where is Dad", "爸爸在哪里")}
           </button>
           <button
             aria-current={view === "appointment" ? "page" : undefined}
@@ -539,35 +589,13 @@ function App() {
           </p>
         )}
         {!state && (
-          <section className="empty-state">
-            <span className="large-symbol">
-              <Route />
-            </span>
-            <h1 ref={headingRef} tabIndex={-1}>
-              {t("Your next journey starts here", "从这里开始您的下一段行程")}
-            </h1>
-            <p>
-              {offline
-                ? t(
-                    "Connect once to prepare and save your hospital journey.",
-                    "请先连接网络，准备并保存您的医院行程。",
-                  )
-                : t(
-                    "Preparing your saved hospital appointment.",
-                    "正在准备已保存的医院预约行程。",
-                  )}
-            </p>
-            <button
-              className="primary"
-              disabled={busy || offline}
-              onClick={prepare}
-            >
-              {busy
-                ? t("Preparing…", "正在准备…")
-                : t("Prepare journey", "准备行程")}
-              <ArrowRight />
-            </button>
-          </section>
+          <Onboarding
+            language={language}
+            busy={busy}
+            offline={offline}
+            onLanguage={setLanguage}
+            onComplete={finishSetup}
+          />
         )}
         {state && journey && step && (
           <>
@@ -600,7 +628,101 @@ function App() {
                   </div>
                 </section>
               )}
-            {view === "family" ? (
+            {personaMode === "caregiver" && view === "journey" ? (
+              <section className="caregiver-home">
+                <span className="eyebrow">
+                  {t("FAMILY VIEW", "家人视角")}
+                </span>
+                <h1 ref={headingRef} tabIndex={-1}>
+                  {state.phase === "active"
+                    ? t("Dad is on his way.", "爸爸正在路上。")
+                    : state.phase === "arrived"
+                      ? t("Dad has arrived safely.", "爸爸已安全到达医院。")
+                      : t("Dad has not left yet.", "爸爸还没出发。")}
+                </h1>
+                {state.family.linked && state.family.scopes.tripUpdates ? (
+                  <>
+                    <div className="caregiver-status card">
+                      {state.phase === "active" && step ? (
+                        <>
+                          <div className="caregiver-progress">
+                            <strong>
+                              {t(
+                                `Step ${stepNumber} of ${state.journey.steps.length}`,
+                                `第 ${stepNumber} 步，共 ${state.journey.steps.length} 步`,
+                              )}
+                            </strong>
+                            <div
+                              className="progress-track"
+                              role="progressbar"
+                              aria-valuemin={1}
+                              aria-valuemax={state.journey.steps.length}
+                              aria-valuenow={stepNumber}
+                            >
+                              <span
+                                style={{
+                                  width: `${Math.round((stepNumber / state.journey.steps.length) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <p className="caregiver-step">
+                            {language === "en"
+                              ? step.instruction.en
+                              : step.instruction.zh}
+                          </p>
+                        </>
+                      ) : state.phase === "planned" ? (
+                        <p className="caregiver-step">
+                          {t(
+                            `Route is ready. He should leave by ${time(journey.departureTime)} and arrive ${timeRange}.`,
+                            `路线已备好。最晚 ${time(journey.departureTime)} 出门，预计 ${timeRange} 到达。`,
+                          )}
+                        </p>
+                      ) : (
+                        <p className="caregiver-step">
+                          {t(
+                            "The appointment journey is complete.",
+                            "本次就诊行程已完成。",
+                          )}
+                        </p>
+                      )}
+                      <small className="caregiver-updated">
+                        {state.progressUpdatedAt
+                          ? t(
+                              `He confirmed this himself · last update ${time(state.progressUpdatedAt)}`,
+                              `由爸爸亲自确认 · 最后更新 ${time(state.progressUpdatedAt)}`,
+                            )
+                          : t(
+                              "Updates appear here once he starts.",
+                              "爸爸开始行程后，这里会显示进展。",
+                            )}
+                      </small>
+                    </div>
+                    <RouteMap journey={journey} language={language} />
+                  </>
+                ) : (
+                  <div className="caregiver-status card">
+                    <p className="caregiver-step">
+                      {t(
+                        "Mr Tan has not shared trip progress. He can turn it on under Family settings.",
+                        "陈伯暂未共享行程进展。他可以在“家属”页里随时开启。",
+                      )}
+                    </p>
+                  </div>
+                )}
+                <div className="caregiver-actions">
+                  <button className="secondary" onClick={() => go("appointment")}>
+                    <CalendarDays size={20} />
+                    {t("Manage appointment", "管理预约")}
+                  </button>
+                  <button className="secondary" onClick={() => go("family")}>
+                    <HeartHandshake size={20} />
+                    {t("Family settings", "家属设置")}
+                  </button>
+                </div>
+              </section>
+            ) : view === "family" ? (
               <FamilyPanel
                 snapshot={state}
                 language={language}
@@ -1112,30 +1234,39 @@ function App() {
                           {t("See the full route", "查看完整路线")}
                           <ChevronRight size={20} />
                         </button>
-                        <button
-                          className="family-strip"
-                          onClick={() => go("family")}
-                        >
-                          <HeartHandshake size={26} />
-                          <span>
-                            <strong>
-                              {t(
-                                "Mei Ling set this journey up for you",
-                                "这段行程由女儿美玲为您安排",
-                              )}
-                            </strong>
-                            <small>
-                              {t(
-                                "She can see how the trip is going — tap to view",
-                                "她可以看到行程进展 · 点击查看家人视角",
-                              )}
-                            </small>
-                          </span>
-                          <ChevronRight size={22} />
-                        </button>
+                        {state.family.linked && (
+                          <div className="family-strip is-static">
+                            <HeartHandshake size={26} />
+                            <span>
+                              <strong>
+                                {t(
+                                  "Mei Ling set this journey up with you",
+                                  "这段行程是美玲和您一起安排的",
+                                )}
+                              </strong>
+                              <small>
+                                {t(
+                                  "She can see how your trip is going",
+                                  "她可以看到您的行程进展，请安心出发",
+                                )}
+                              </small>
+                            </span>
+                          </div>
+                        )}
                       </section>
                     ) : (
                       <section className="card guidance-card">
+                        {step && step.mode === "train" && (
+                          <div className="tunnel-banner">
+                            <Download size={22} />
+                            <span>
+                              {t(
+                                "No signal underground ahead — your instructions are already saved on this phone.",
+                                "前方地下路段没有信号——指引已提前保存在这部手机上，请放心。",
+                              )}
+                            </span>
+                          </div>
+                        )}
                         <div className="section-heading">
                           <span className="eyebrow">
                             {t(
@@ -1368,6 +1499,30 @@ function App() {
           </details>
         )}
       </main>
+      {state && (
+        <div className="mode-bar" role="group" aria-label={t("Who is using the app", "使用者模式")}>
+          <button
+            aria-pressed={personaMode === "elder"}
+            onClick={() => {
+              setPersonaMode("elder");
+              go("journey");
+            }}
+          >
+            <Route size={22} />
+            {t("Mr Tan's view", "长辈模式")}
+          </button>
+          <button
+            aria-pressed={personaMode === "caregiver"}
+            onClick={() => {
+              setPersonaMode("caregiver");
+              go("journey");
+            }}
+          >
+            <HeartHandshake size={22} />
+            {t("Family view", "家人模式")}
+          </button>
+        </div>
+      )}
       <footer className="site-footer">
         <span>
           <Leaf size={17} />
