@@ -58,17 +58,6 @@ async def _feeds():
             await fetch(None, two_hour_forecast), "live")
 
 
-def _side_alerts(plan, lifts_raw, weather_raw, origin: Place, destination: Place, source: str):
-    """Lift and rain warnings: they inform the traveller but do not invalidate a route."""
-    alerts = []
-    if lifts_raw is not None:
-        alerts += conditions.lift_alerts_for(plan, lifts_raw, data_source=source)
-    if weather_raw is not None:
-        alerts += conditions.weather_alerts_for(plan, weather_raw, origin=origin,
-                                                destination=destination, data_source=source)
-    return alerts
-
-
 @router.post("/journeys/plan", response_model=Journey, response_model_by_alias=True)
 async def plan(req: PlanRequest) -> Journey:
     origin, destination = _places(req)
@@ -82,13 +71,12 @@ async def plan(req: PlanRequest) -> Journey:
     train_raw, lifts_raw, weather_raw, source = await _feeds()
     journey = planner.build_journey(req, raw, origin=origin, destination=destination, now=_now(),
                                     data_mode="simulated" if source == "simulated" else "live")
-    best = convert(raw[0], pace_factor=req.walking_speed_factor, origin=origin, destination=destination)
     # Attach today's context to the plan so the first screen already tells the whole story.
     ranked_best = planner.rank([convert(r, pace_factor=req.walking_speed_factor,
                                         origin=origin, destination=destination) for r in raw])[0]
     if train_raw is not None:
         journey.alerts += conditions.train_alerts_for(ranked_best, train_raw, data_source=source)
-    journey.alerts += _side_alerts(ranked_best, lifts_raw, weather_raw, origin, destination, source)
+    journey.alerts += refresh._side_alerts(ranked_best, lifts_raw, weather_raw, origin, destination, source)
 
     STORE.put(journey.id, StoredJourney(request=req, raw_itineraries=raw, version=journey.version,
                                         created_at=journey.updated_at))
@@ -106,18 +94,10 @@ async def refresh_journey(journey_id: str, body: RefreshRequest) -> RefreshRespo
     out = refresh.evaluate(req=stored.request, raw_itineraries=stored.raw_itineraries,
                            train_alerts_raw=train_raw, alerts_data_source=source,
                            origin=origin, destination=destination,
-                           journey_id=journey_id, current_version=stored.version, now=_now())
-
-    # Whatever the outcome, carry today's lift and rain warnings for the route he is on.
-    current = planner.rank([convert(r, pace_factor=stored.request.walking_speed_factor,
-                                    origin=origin, destination=destination)
-                            for r in stored.raw_itineraries])[0]
-    side = _side_alerts(current, lifts_raw, weather_raw, origin, destination, source)
+                           journey_id=journey_id, current_version=stored.version, now=_now(),
+                           facilities_raw=lifts_raw, weather_raw=weather_raw)
     if out.journey is not None:
-        out.journey.alerts += side
         STORE.bump_version(journey_id, out.journey.version)
-    else:
-        out.alerts += side
     return out
 
 

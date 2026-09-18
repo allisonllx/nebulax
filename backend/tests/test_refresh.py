@@ -74,3 +74,20 @@ def test_a_failed_feed_is_unknown_not_all_clear(transit_itineraries, bus_itinera
 
     assert out.result == "unchanged"
     assert out.data_freshness == "unknown"
+
+
+def test_replacement_warnings_describe_the_replacement_not_the_old_route(transit_itineraries, bus_itineraries):
+    novena_lift = {"value": [{"Line": "NSL", "StationCode": "NS20", "StationName": "Novena",
+                              "LiftID": "B1L01", "LiftDesc": "Exit A Street level - Concourse"}]}
+    out = evaluate(
+        req=PlanRequest(arrive_by=ARRIVE_BY),
+        raw_itineraries=transit_itineraries + bus_itineraries,
+        train_alerts_raw=disruption(), alerts_data_source="simulated",
+        origin=SAVED_PLACES["saved-home"], destination=SAVED_PLACES["ttsh-entrance"],
+        journey_id="trip-001", current_version=1, now=NOW,
+        facilities_raw=novena_lift,
+    )
+
+    # The recommended bus route never enters Novena MRT station, so no lift warning belongs on it.
+    assert out.result == "replacement_available"
+    assert all(a.type != "lift_maintenance" for a in out.journey.alerts)
