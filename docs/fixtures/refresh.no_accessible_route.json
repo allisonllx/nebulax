@@ -1,0 +1,62 @@
+{
+  "result": "no_accessible_route",
+  "checkedAt": "2026-09-21T08:20:00+08:00",
+  "journey": null,
+  "message": {
+    "en": "We cannot find a route without stairs right now. Please call Mei Ling.",
+    "zh": "现在找不到不用走楼梯的路线。请打电话给美玲。"
+  },
+  "alerts": [
+    {
+      "id": "alert-nsl-1",
+      "type": "train_disruption",
+      "severity": "major",
+      "planned": false,
+      "message": {
+        "en": "No train service on the North South Line between Bishan and Newton. Free regular bus services are available.",
+        "zh": "南北线碧山至纽顿之间列车服务中断,可免费搭乘巴士。"
+      },
+      "line": "NSL",
+      "stationCodes": [
+        "NS17",
+        "NS18",
+        "NS19",
+        "NS20",
+        "NS21"
+      ],
+      "affectsJourney": true,
+      "affectedLegIds": [
+        "leg-4"
+      ],
+      "source": "LTA TrainServiceAlerts",
+      "dataSource": "simulated",
+      "sourceUpdatedAt": "2026-09-21T08:17:00+08:00"
+    },
+    {
+      "id": "alert-bus-851",
+      "type": "bus_diversion",
+      "severity": "major",
+      "planned": false,
+      "message": {
+        "en": "Bus 851 is diverted and skips the Novena stop.",
+        "zh": "851 号巴士改道,不停诺维娜站。"
+      },
+      "affectsJourney": true,
+      "affectedLegIds": [
+        "leg-2"
+      ],
+      "source": "LTA TrainServiceAlerts Message",
+      "dataSource": "simulated",
+      "sourceUpdatedAt": "2026-09-21T08:19:00+08:00"
+    }
+  ],
+  "helpActions": [
+    {
+      "type": "call",
+      "label": {
+        "en": "Call Mei Ling",
+        "zh": "打电话给美玲"
+      }
+    }
+  ]
+}
