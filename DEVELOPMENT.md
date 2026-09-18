@@ -2,6 +2,8 @@
 
 The application lives in `frontend/` and `backend/`. Problem-statement materials remain in `PS2/`.
 
+Before feature work, see the [frontend product plan](docs/frontend-plan.md) and [frontend–backend contract checklist](docs/backend-contracts.md).
+
 ## Prerequisites
 
 - Node.js 22.12+ and npm (Node.js 24 LTS recommended)
