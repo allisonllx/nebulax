@@ -69,17 +69,32 @@ async def plan(req: PlanRequest) -> Journey:
         raise HTTPException(status_code=502, detail="Routing provider returned no itineraries")
 
     train_raw, lifts_raw, weather_raw, source = await _feeds()
-    journey = planner.build_journey(req, raw, origin=origin, destination=destination, now=_now(),
-                                    data_mode="simulated" if source == "simulated" else "live")
-    # Attach today's context to the plan so the first screen already tells the whole story.
-    ranked_best = planner.rank([convert(r, pace_factor=req.walking_speed_factor,
-                                        origin=origin, destination=destination) for r in raw])[0]
-    if train_raw is not None:
-        journey.alerts += conditions.train_alerts_for(ranked_best, train_raw, data_source=source)
-    journey.alerts += refresh._side_alerts(ranked_best, lifts_raw, weather_raw, origin, destination, source)
-
+    data_mode = "simulated" if source == "simulated" else "live"
+    now = _now()
+    ranked = planner.rank([convert(r, pace_factor=req.walking_speed_factor,
+                                   origin=origin, destination=destination) for r in raw])
+    journey = planner.assemble(req, ranked[0], now=now, data_mode=data_mode)
     STORE.put(journey.id, StoredJourney(request=req, raw_itineraries=raw, version=journey.version,
-                                        created_at=journey.updated_at))
+                                        created_at=now, chosen_index=0))
+
+    # Genuinely different alternatives (a different set of travel modes), for the setup
+    # route choice. Each gets its own id so refreshing it protects that route.
+    seen_modes = {frozenset(s.mode for s in ranked[0].steps)}
+    for index, candidate in enumerate(ranked[1:], start=1):
+        modes = frozenset(s.mode for s in candidate.steps)
+        if modes in seen_modes or len(journey.alternatives) >= 2:
+            continue
+        seen_modes.add(modes)
+        alternative = planner.assemble(req, candidate, now=now, data_mode=data_mode)
+        STORE.put(alternative.id, StoredJourney(request=req, raw_itineraries=raw,
+                                                version=alternative.version, created_at=now,
+                                                chosen_index=index))
+        journey.alternatives.append(alternative)
+
+    # Attach today's context to the plan so the first screen already tells the whole story.
+    if train_raw is not None:
+        journey.alerts += conditions.train_alerts_for(ranked[0], train_raw, data_source=source)
+    journey.alerts += refresh._side_alerts(ranked[0], lifts_raw, weather_raw, origin, destination, source)
     return journey
 
 
@@ -95,7 +110,8 @@ async def refresh_journey(journey_id: str, body: RefreshRequest) -> RefreshRespo
                            train_alerts_raw=train_raw, alerts_data_source=source,
                            origin=origin, destination=destination,
                            journey_id=journey_id, current_version=stored.version, now=_now(),
-                           facilities_raw=lifts_raw, weather_raw=weather_raw)
+                           facilities_raw=lifts_raw, weather_raw=weather_raw,
+                           chosen_index=stored.chosen_index)
     if out.journey is not None:
         STORE.bump_version(journey_id, out.journey.version)
     return out

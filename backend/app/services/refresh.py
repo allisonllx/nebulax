@@ -20,7 +20,8 @@ def _side_alerts(plan, facilities_raw, weather_raw, origin, destination, source)
 def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw: dict | None,
              alerts_data_source: str, origin: Place, destination: Place,
              journey_id: str, current_version: int, now: datetime,
-             facilities_raw: dict | None = None, weather_raw: dict | None = None) -> RefreshResponse:
+             facilities_raw: dict | None = None, weather_raw: dict | None = None,
+             chosen_index: int = 0) -> RefreshResponse:
     if train_alerts_raw is None:
         # A feed we could not read is unknown, never an all-clear.
         return RefreshResponse(result="unchanged", status="unchanged", checked_at=now, data_freshness="unknown")
@@ -28,7 +29,7 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
     candidates = [convert(raw, pace_factor=req.walking_speed_factor, origin=origin, destination=destination)
                   for raw in raw_itineraries]
     ranked = planner.rank(candidates)
-    current = ranked[0]
+    current = ranked[min(chosen_index, len(ranked) - 1)]
 
     current_alerts = conditions.train_alerts_for(current, train_alerts_raw, data_source=alerts_data_source)
     if not current_alerts:
@@ -37,8 +38,8 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
                                                    origin, destination, alerts_data_source))
 
     data_mode = "simulated" if alerts_data_source == "simulated" else "live"
-    feasible = [c for c in ranked[1:]
-                if not conditions.train_alerts_for(c, train_alerts_raw, data_source=alerts_data_source)]
+    feasible = [c for c in ranked if c is not current
+                and not conditions.train_alerts_for(c, train_alerts_raw, data_source=alerts_data_source)]
     if not feasible:
         return RefreshResponse(
             result="no_accessible_route", status="no_accessible_route", checked_at=now,

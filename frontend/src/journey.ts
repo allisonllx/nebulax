@@ -54,6 +54,8 @@ export const journeySchema = z.object({
     .min(1),
   routeGeometry: geometry,
   alerts: z.array(z.object({ id: z.string(), message: bilingual })),
+  transfers: z.number().int().nonnegative().optional(),
+  walkDistanceMetres: z.number().nonnegative().optional(),
 });
 export type Journey = z.infer<typeof journeySchema>;
 export const refreshSchema = z.discriminatedUnion("status", [
@@ -303,6 +305,19 @@ export async function planJourney(input: PlanRequest): Promise<Journey> {
   return journeySchema.parse(
     isDemo ? demoPlan(input) : await request("/journeys/plan", input),
   );
+}
+const planResponseSchema = journeySchema.extend({
+  alternatives: z.array(journeySchema).default([]),
+});
+/** Plan plus genuinely different route options, for the setup route choice. */
+export async function planJourneyWithOptions(
+  input: PlanRequest,
+): Promise<{ journey: Journey; alternatives: Journey[] }> {
+  if (isDemo) return { journey: journeySchema.parse(demoPlan(input)), alternatives: [] };
+  const { alternatives, ...journey } = planResponseSchema.parse(
+    await request("/journeys/plan", input),
+  );
+  return { journey, alternatives };
 }
 export async function refreshJourney(
   journey: Journey,

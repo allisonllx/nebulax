@@ -12,6 +12,7 @@ class StoredJourney:
     raw_itineraries: list[dict]  # candidates fetched at plan time; refresh re-ranks without re-fetching
     version: int
     created_at: datetime
+    chosen_index: int = 0  # position in the ranked candidate list this journey id follows
 
 
 class JourneyStore:

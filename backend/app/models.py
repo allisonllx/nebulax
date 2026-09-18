@@ -80,6 +80,10 @@ class Journey(ApiModel):
     steps: list[Step]
     route_geometry: dict[str, Any]  # GeoJSON FeatureCollection, [longitude, latitude]
     alerts: list[Alert] = []
+    # Populated only on the plan response: genuinely different ways to make the trip,
+    # for the caregiver to choose from during setup. Each is registered server-side,
+    # so refreshing an alternative's id evaluates conditions against THAT route.
+    alternatives: list["Journey"] = []
 
 
 class PlanRequest(ApiModel):

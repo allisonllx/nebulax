@@ -149,3 +149,26 @@ def test_refresh_response_also_carries_status_alias(client):
 
     body = r.json()
     assert body["status"] == body["result"] == "unchanged"
+
+
+def test_plan_offers_alternative_routes(client):
+    j = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+
+    assert len(j["alternatives"]) >= 1
+    modes_main = {s["mode"] for s in j["steps"]}
+    modes_alt = {s["mode"] for s in j["alternatives"][0]["steps"]}
+    assert modes_main != modes_alt          # a genuinely different way to travel
+    assert j["alternatives"][0]["id"] != j["id"]
+
+
+def test_choosing_the_bus_alternative_changes_what_refresh_protects(client):
+    j = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+    bus = next(a for a in j["alternatives"]
+               if all(s["mode"] != "train" for s in a["steps"]))
+
+    client.post("/api/scenarios/nsl_disruption/activate")
+    on_mrt = client.post(f"/api/journeys/{j['id']}/refresh", json={"version": 1}).json()
+    on_bus = client.post(f"/api/journeys/{bus['id']}/refresh", json={"version": 1}).json()
+
+    assert on_mrt["result"] == "replacement_available"   # his route is broken
+    assert on_bus["result"] == "unchanged"               # the chosen bus route is not

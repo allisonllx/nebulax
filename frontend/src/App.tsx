@@ -32,6 +32,7 @@ import {
   isDemo,
   loadSnapshot,
   planJourney,
+  planJourneyWithOptions,
   planRequest,
   requestForAppointment,
   refreshJourney,
@@ -92,6 +93,11 @@ function App() {
   const [saved, setSaved] = useState(false);
   const [shellReady, setShellReady] = useState(false);
   const [notice, setNotice] = useState("");
+  // Route options computed from the setup answers, awaiting Mei Ling's choice.
+  const [routeChoices, setRouteChoices] = useState<{
+    answers: SetupAnswers;
+    options: import("./journey").Journey[];
+  } | null>(null);
   const stateRef = useRef(state);
   useLayoutEffect(() => {
     stateRef.current = state;
@@ -177,37 +183,46 @@ function App() {
       /* fine — read-aloud stays on by default */
     }
     try {
-      const result = await planJourney({
+      const { journey: main, alternatives } = await planJourneyWithOptions({
         ...planRequest,
         walkingSpeedFactor: answers.paceFactor,
       });
-      setState({
-        schemaVersion: 1,
-        journey: result,
-        stepIndex: 0,
-        phase: "planned",
-        language,
-        large: true,
-        blocked: false,
-        proposal: null,
-        appointment: defaultAppointment,
-        family: {
-          ...defaultFamily,
-          linked: answers.shareWithFamily,
-          scopes: {
-            tripUpdates: answers.shareWithFamily,
-            prepareAppointments: answers.shareWithFamily,
-          },
-          consentedAt: answers.shareWithFamily ? new Date().toISOString() : null,
-        },
-        progressUpdatedAt: null,
-      });
-      setPersonaMode("elder");
+      if (alternatives.length > 0) {
+        // Show the computed options and let Mei Ling pick the familiar one.
+        setRouteChoices({ answers, options: [main, ...alternatives] });
+      } else {
+        commitRoute(main, answers);
+      }
     } catch {
       setError("load");
     } finally {
       setBusy(false);
     }
+  }
+  function commitRoute(chosen: import("./journey").Journey, answers: SetupAnswers) {
+    setState({
+      schemaVersion: 1,
+      journey: chosen,
+      stepIndex: 0,
+      phase: "planned",
+      language,
+      large: true,
+      blocked: false,
+      proposal: null,
+      appointment: defaultAppointment,
+      family: {
+        ...defaultFamily,
+        linked: answers.shareWithFamily,
+        scopes: {
+          tripUpdates: answers.shareWithFamily,
+          prepareAppointments: answers.shareWithFamily,
+        },
+        consentedAt: answers.shareWithFamily ? new Date().toISOString() : null,
+      },
+      progressUpdatedAt: null,
+    });
+    setRouteChoices(null);
+    setPersonaMode("elder");
   }
 
   function go(nextView: View) {
@@ -588,7 +603,53 @@ function App() {
             {notice}
           </p>
         )}
-        {!state && (
+        {!state && routeChoices && (
+          <div className="onboarding">
+            <section className="onboarding-card">
+              <span className="eyebrow">
+                {t("LAST STEP · ROUTES COMPUTED FOR HIM", "最后一步 · 已按爸爸的情况算出方案")}
+              </span>
+              <h1>
+                {t(
+                  "Which way does he usually go?",
+                  "平时是怎么去医院的？",
+                )}
+              </h1>
+              <p className="onboarding-note">
+                {t(
+                  "Timed at his walking pace, stairs avoided. The chosen route becomes the one we protect and re-plan around.",
+                  "所有时间都按他的步速计算，并已避开楼梯。选中的路线会成为基准——遇到突发情况时，优先围绕它重新规划。",
+                )}
+              </p>
+              {routeChoices.options.map((option, index) => {
+                const modes = new Set(option.steps.map((item) => item.mode));
+                const name = modes.has("train")
+                  ? t("MRT with bus feeder", "地铁为主（巴士接驳）")
+                  : t("Direct bus, no transfer", "巴士直达，不用换车");
+                return (
+                  <button
+                    key={option.id}
+                    className="onboarding-choice"
+                    onClick={() => commitRoute(option, routeChoices.answers)}
+                  >
+                    <span>{name}</span>
+                    <small>
+                      {t(
+                        `Leave ${time(option.departureTime)} · arrive ${arrival(option)}` +
+                          (option.transfers === 0 ? " · no transfer" : ` · ${option.transfers} transfer`) +
+                          (index === 0 ? " · fastest" : ""),
+                        `最晚 ${time(option.departureTime)} 出门 · 预计 ${arrival(option)} 到` +
+                          (option.transfers === 0 ? " · 不用换车" : ` · 换乘 ${option.transfers} 次`) +
+                          (index === 0 ? " · 最快" : ""),
+                      )}
+                    </small>
+                  </button>
+                );
+              })}
+            </section>
+          </div>
+        )}
+        {!state && !routeChoices && (
           <Onboarding
             language={language}
             busy={busy}
