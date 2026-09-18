@@ -26,5 +26,13 @@ if _static and pathlib.Path(_static).is_dir():
     def spa(path: str):
         candidate = (static_dir / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(static_dir):
+            # The service worker and manifest must never be cached, or clients get
+            # stuck on old deploys; hashed assets are safe to cache forever.
+            if path in ("sw.js", "registerSW.js", "manifest.webmanifest"):
+                return FileResponse(candidate, headers={"Cache-Control": "no-cache"})
+            if path.startswith("assets/"):
+                return FileResponse(candidate,
+                                    headers={"Cache-Control": "public, max-age=31536000, immutable"})
             return FileResponse(candidate)
-        return FileResponse(static_dir / "index.html")
+        return FileResponse(static_dir / "index.html",
+                            headers={"Cache-Control": "no-cache"})
