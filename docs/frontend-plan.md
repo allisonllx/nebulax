@@ -31,7 +31,7 @@ The experience centres on one saved journey and one clear next action. Mr Tan sh
 
 | Stage | Information shown | Main action |
 | --- | --- | --- |
-| First use | Language, text preview, travel needs, appointment and optional caregiver linking | Save journey preferences |
+| First use | Skippable welcome, language/text preview and a practice instruction; journey setup follows separately | Try the guide or go to My journey |
 | Night before | Next appointment, proposed departure time, relevant published changes and freshness | Review tomorrow's journey |
 | Before departure | Recommended route, arrival range, walking, transfers, shelter and readiness for offline use | Start journey |
 | Travelling | Current instruction, next landmark, current progress and supporting map | Confirm a meaningful checkpoint when needed |
@@ -49,6 +49,59 @@ Split compound instructions into steps. Getting off a train, locating a lift and
 When location is uncertain, ask for a recognisable checkpoint. Do not advance solely because a timer predicts arrival. Include "I'm not sure where I am" and help access.
 
 If no verified route meets the no-stairs constraint, explain that and offer help. Do not silently relax the constraint. Show uncertainty rather than guaranteeing arrival or facility availability.
+
+## First-time onboarding and ongoing help
+
+Status: proposed next frontend work; this section does not describe implemented screens. Existing appointment and family prototype behaviour is documented in [the prototype walkthrough](appointment-family-prototype.md).
+
+### Recommended approach
+
+Use a short, skippable introduction plus a permanent Help page. Onboarding helps a new traveller recognise the main controls; Help lets them revisit an explanation when they forget it. Avoid a long slideshow, mandatory tutorial or tooltips covering the journey screen.
+
+Keep orientation separate from filling in appointments, travel needs and family permissions. A family member can sit beside the traveller during setup, but the traveller can complete or skip the introduction independently.
+
+### First-use flow
+
+Show one task per screen, with labelled Back, Next and Skip introduction controls. Use large text, generous touch targets and the same labels as the real app. Do not advance automatically or impose a time limit.
+
+| Step | What the traveller sees and does |
+| --- | --- |
+| 1. Welcome and language | “We will guide you one step at a time.” Choose English / 中文 using those language names; a clearly labelled Listen / 听一听 button offers a spoken introduction after a tap. |
+| 2. Make it comfortable | Preview an actual instruction in large or extra-large text. Try reading it aloud, repeating it and stopping playback. Keep a readable default if this step is skipped; audio is optional. |
+| 3. Try one instruction | A clearly labelled practice screen: read a sample instruction, optionally listen, then tap “Practise next step”. Explain that in a real journey they confirm only after completing the instruction. Practice must not start a trip, change progress, mark arrival or contact anyone. |
+| 4. Know where to get help | Point out “I’m not sure where I am”, “Call my trusted person” and “How to use this app”. Explain that saved instructions remain readable without internet, but new travel updates and calls may be unavailable. Finish with “Go to My journey”. |
+
+After orientation, My journey offers “Set up my journey” when there is no saved appointment/route. Collect travel needs and appointment details there; offer family support as an optional later step. Skipping orientation must never imply that travel needs, a route or sharing consent have been configured. Keep demo journeys visibly labelled in the prototype.
+
+Remember completion or an explicit skip on this device. If interrupted, resume at the last introduction step on the next first-use visit, with Skip still available. Never interrupt an active journey with onboarding, including after an app update. Replaying the introduction from Help must preserve the active journey and all saved preferences; changing language/text size remains an explicit action.
+
+### Help page
+
+Keep a labelled “Help” button accessible from every main screen. Inside Help, put immediate assistance first, with learning below it:
+
+- **I’m not sure where I am:** show the current saved step and recognisable checkpoint; offer repeating the instruction and contacting a trusted person. Never guess a new route from an uncertain location.
+- **Call / text my trusted person:** show the configured name and number. If none exists, say so and offer contact setup. Open the dialler/composer only after the traveller taps; opening it does not mean a call connected or a message was sent.
+- **How to use this app:** replay the introduction or choose a short explanation of starting a journey, reading/hearing a step, handling a route change, or confirming arrival.
+- **No internet / no sound:** explain what is saved, when travel conditions were last updated, and how to continue using text if speech is unavailable.
+- **Family and privacy:** explain what is shared, how to review permissions and how to stop sharing; link to Family controls.
+
+Use plain language, English/Chinese and optional read-aloud. Keep explanations short, with one useful action and a visible “Back to journey” button. A searchable FAQ, chatbot and mandatory voice input are outside the first version.
+
+### Offline, permissions and minimum backend agreement
+
+- Bundle the introduction and Help text with the app shell so they remain available after a successful offline download. A first-ever visit still needs the app to load; do not promise offline audio unless a usable local voice or saved audio is available.
+- Store a versioned local onboarding record: completed/skipped/in-progress and last step. Store language/text preferences separately, without resetting the existing journey snapshot. If storage fails, keep the app usable and explain that preferences may not be remembered.
+- No new API endpoint is needed for this first version. Confirm with backend whether preferences will eventually sync to a profile; cross-device onboarding completion can wait.
+- Completing onboarding never grants caregiver permissions. Microphone and location permission requests belong at the point a supported feature needs them, with touch/manual alternatives; do not request them during the introduction.
+- Keep the current prototype’s family preview and help links clearly distinguished from future real account linking, notifications and help-message delivery.
+
+### Validation for this addition
+
+- A first-time traveller can choose a language, try a spoken instruction, skip/replay the guide and find Help without coaching.
+- Completing or replaying practice never alters the saved route, checkpoint, arrival state or sharing permissions.
+- Completed/skipped introductions stay dismissed after reopening; interrupted introductions resume without blocking access to My journey.
+- Help works in English/Chinese, at enlarged text sizes and offline after caching; missing audio or a missing contact has a clear fallback.
+- Leaving Help or replaying the guide returns to the same active journey step.
 
 ## Family involvement and independence
 
