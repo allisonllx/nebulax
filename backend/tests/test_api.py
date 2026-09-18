@@ -1,0 +1,95 @@
+import pytest
+from fastapi.testclient import TestClient
+
+import app.api.journeys as journeys_api
+from main import app
+from tests.conftest import load
+from tests.test_conditions import NORMAL_DAY, disruption
+
+PLAN_BODY = {"origin": "saved-home", "destination": "ttsh-entrance",
+             "arriveBy": "2026-09-21T10:00:00+08:00", "stepFree": True, "walkingSpeedFactor": 0.6}
+
+
+@pytest.fixture
+def client(monkeypatch):
+    transit = load("onemap_transit.json")["plan"]["itineraries"]
+    bus = load("onemap_bus.json")["plan"]["itineraries"]
+
+    async def fake_route_candidates(origin, destination, arrive_by):
+        return transit + bus
+
+    async def fake_train_alerts():
+        return NORMAL_DAY
+
+    monkeypatch.setattr(journeys_api, "route_candidates", fake_route_candidates)
+    monkeypatch.setattr(journeys_api, "train_service_alerts", fake_train_alerts)
+    journeys_api.SCENARIOS.deactivate()
+    with TestClient(app) as c:
+        yield c
+    journeys_api.SCENARIOS.deactivate()
+
+
+def test_plan_returns_a_full_journey_in_the_agreed_shape(client):
+    r = client.post("/api/journeys/plan", json=PLAN_BODY)
+
+    assert r.status_code == 200
+    j = r.json()
+    assert j["dataMode"] == "live" and j["version"] == 1
+    assert j["departureTime"] < j["arrivalWindow"]["earliest"] < j["arrivalWindow"]["latest"]
+    assert j["steps"][0]["instruction"]["zh"].startswith("步行")
+    assert j["routeGeometry"]["type"] == "FeatureCollection"
+    assert j["alerts"] == []
+
+
+def test_refresh_unknown_journey_is_404(client):
+    r = client.post("/api/journeys/trip-nope/refresh", json={"version": 1})
+
+    assert r.status_code == 404
+
+
+def test_refresh_quiet_day_is_unchanged(client):
+    trip = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+
+    r = client.post(f"/api/journeys/{trip['id']}/refresh", json={"version": trip["version"]})
+
+    assert r.status_code == 200
+    assert r.json() == {"result": "unchanged", "checkedAt": r.json()["checkedAt"],
+                        "dataFreshness": "fresh", "journey": None, "message": None,
+                        "alerts": [], "helpActions": []}
+
+
+def test_activating_the_disruption_scenario_changes_refresh_and_labels_it(client):
+    trip = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+
+    assert client.post("/api/scenarios/nsl_disruption/activate").status_code == 200
+    r = client.post(f"/api/journeys/{trip['id']}/refresh", json={"version": trip["version"]})
+
+    body = r.json()
+    assert body["result"] == "replacement_available"
+    assert body["journey"]["dataMode"] == "simulated"
+    assert body["journey"]["version"] == trip["version"] + 1
+    modes = {s["mode"] for s in body["journey"]["steps"]}
+    assert "mrt" not in modes
+
+
+def test_scenarios_can_be_listed_and_deactivated(client):
+    r = client.get("/api/scenarios")
+
+    names = {s["name"] for s in r.json()["scenarios"]}
+    assert "nsl_disruption" in names
+    assert client.post("/api/scenarios/deactivate").status_code == 200
+    assert r.json()["active"] is None
+
+
+def test_a_dead_feed_reports_unknown_freshness(client, monkeypatch):
+    trip = client.post("/api/journeys/plan", json=PLAN_BODY).json()
+
+    async def broken_alerts():
+        raise RuntimeError("timeout")
+
+    monkeypatch.setattr(journeys_api, "train_service_alerts", broken_alerts)
+    r = client.post(f"/api/journeys/{trip['id']}/refresh", json={"version": trip["version"]})
+
+    assert r.status_code == 200
+    assert r.json()["result"] == "unchanged"
+    assert r.json()["dataFreshness"] == "unknown"
