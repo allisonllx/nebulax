@@ -161,7 +161,14 @@ export function LiveMap({ journey, original, currentLegId, position, language, d
       <RouteSketch journey={journey} position={position} language={language} />
     );
   }
-  return <div className="calm-map-shell"><div ref={container} className={`live-map ${density === "elder" ? "elder-map" : ""}`} aria-label={t("Route map", "路线地图")} />{tileError && <p className="calm-map-error" role="status">{t("Street map unavailable · route only", "街道底图暂不可用 · 仅显示路线")}</p>}</div>;
+  // A blank basemap is worse than no basemap: if tiles fail (offline, or a MapTiler key
+  // restricted to other origins) draw the route as a diagram instead.
+  if (tileError) {
+    return (
+      <RouteSketch journey={journey} position={position} language={language} />
+    );
+  }
+  return <div className="calm-map-shell"><div ref={container} className={`live-map ${density === "elder" ? "elder-map" : ""}`} aria-label={t("Route map", "路线地图")} /></div>;
 }
 
 const mapMarkers = new WeakMap<maplibregl.Map, {markers: maplibregl.Marker[]; position: maplibregl.Marker | null}>();

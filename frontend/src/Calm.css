@@ -87,3 +87,10 @@
 .calm-route-fallback p { font-size:12px; padding:5px; text-align:center; }
 @media(min-width:700px) { .calm-app .main-shell { padding-top:32px; } .calm-home-art { height:155px; } }
 @media(max-width:350px) { .calm-app .main-shell { padding:20px 16px 10px; } .calm-app .site-header { padding:12px 16px; } .calm-app .brand { font-size:21px; } .calm-instruction h1 { font-size:27px; } .calm-primary,.calm-contact { font-size:21px; } .calm-appointment { padding:15px 10px; gap:8px; } .calm-recovery { padding:16px; gap:8px; } .calm-recovery h1 {font-size:24px;} }
+.calm-remaining { font-size:26px; font-weight:750; color:#205c43; margin-top:10px; line-height:1.3; }
+.calm-heading-line { font-size:20px; line-height:1.5; margin-top:8px; color:#2c4a3c; font-weight:600; }
+.calm-distance { font-size:19px; line-height:1.5; margin-top:8px; color:#2c4a3c; font-weight:600; }
+.calm-place-line { font-size:16px; line-height:1.5; margin-top:8px; color:#6b7d74; }
+.calm-route-fallback { background:#eef2e6; border-radius:20px; padding:14px; }
+.calm-route-fallback svg { width:100%; height:auto; }
+.calm-route-fallback p { font-size:14px; color:#5d7169; text-align:center; margin-top:6px; }

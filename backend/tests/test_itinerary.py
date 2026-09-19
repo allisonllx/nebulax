@@ -130,3 +130,19 @@ def test_a_walk_leg_without_provider_steps_still_gets_a_direction(mrt_itinerary)
         if step.mode == "walk":
             assert step.directions, "geometry fallback must produce a departure direction"
             assert "米" in step.directions[0].zh
+
+
+def test_ride_minutes_sit_on_the_alighting_step_not_the_boarding_one(mrt_itinerary):
+    plan = convert(mrt_itinerary, pace_factor=0.6)
+
+    board, alight = [s for s in plan.steps if s.mode == "train"]
+    assert board.duration_minutes == 0, "boarding is instantaneous"
+    assert alight.duration_minutes > 0, "riding N stops is what takes the minutes"
+
+
+def test_every_walking_step_reports_its_distance(mrt_itinerary):
+    plan = convert(mrt_itinerary, pace_factor=0.6)
+
+    for step in plan.steps:
+        if step.mode == "walk":
+            assert step.distance_metres and step.distance_metres > 0

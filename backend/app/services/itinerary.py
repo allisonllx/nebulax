@@ -121,8 +121,9 @@ def convert(raw: dict, *, pace_factor: float, origin: Place, destination: Place)
                 directions=walk_directions,
                 detail=Text(en=f"{from_name.en} → {to_name.en}", zh=f"{from_name.zh} → {to_name.zh}"),
                 confirmation=confirmation, place=place,
-                # Riding time sits on the boarding step; stepping off takes no extra minutes.
-                duration_minutes=minutes if (mode == "walk" or is_board) else 0,
+                # The riding time belongs to the "ride N stops and get off" step, which is what
+                # actually takes the minutes; boarding itself is instantaneous.
+                duration_minutes=0 if (mode != "walk" and is_board) else minutes,
                 duration_seconds=seconds if is_last else None,  # the leg's time sits on its final step
                 distance_metres=round(leg["distance"]) if mode == "walk" else None,
                 connectivity="tunnel" if mode == "train" else "online",

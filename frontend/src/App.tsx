@@ -1249,8 +1249,22 @@ function App() {
                             <div>
                               <span className="eyebrow">
                                 {t(
-                                  `STEP ${index + 1} · ${item.durationMinutes} MIN`,
-                                  `第${index + 1}步 · ${item.durationMinutes}分钟`,
+                                  `STEP ${index + 1}` +
+                                    (item.durationMinutes
+                                      ? ` · ${item.durationMinutes} MIN`
+                                      : "") +
+                                    (item.mode === "walk" &&
+                                    item.distanceMetres != null
+                                      ? ` · ${item.distanceMetres} M`
+                                      : ""),
+                                  `第${index + 1}步` +
+                                    (item.durationMinutes
+                                      ? ` · ${item.durationMinutes} 分钟`
+                                      : "") +
+                                    (item.mode === "walk" &&
+                                    item.distanceMetres != null
+                                      ? ` · ${item.distanceMetres} 米`
+                                      : ""),
                                 )}
                               </span>
                               <h3>{item.instruction[language]}</h3>

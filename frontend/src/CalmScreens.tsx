@@ -45,7 +45,12 @@ export function ElderGuidance({ journey, language, index, position, remaining, o
   return <section className={`calm-guidance ${recovery ? 'is-recovering' : ''}`}>
     <div className="calm-progress"><span>{zh ? `第 ${index+1} 步，共 ${journey.steps.length} 步` : `Step ${index+1} of ${journey.steps.length}`}</span><span className="calm-dots" aria-hidden="true">{journey.steps.map((s,i)=><i key={s.id} className={i<=index?'filled':''}/>)}</span></div>
     {recovery ? <div className="calm-recovery" role="status"><TriangleAlert size={34}/><div><h1>{recovered ? (zh ? '新路线已准备好' : 'Your new route is ready') : (zh ? '路线变了，请先停一下' : 'The route has changed — please stop for a moment')}</h1><p>{recovered ? (zh ? '请听新的指引，再继续前行。' : 'Listen to the new directions before continuing.') : (zh ? '请在安全的地方停下，我们会帮助您找到方向。' : 'Stop somewhere safe. We’ll help you find your way.')}</p></div></div>
-      : <div className="calm-instruction"><span className="calm-step-symbol"><Icon size={44} strokeWidth={1.7}/></span><h1 tabIndex={-1} data-testid="elder-current-instruction">{step.instruction[language]}</h1><p>{remaining !== undefined ? (zh ? `大约还有 ${remaining} 米` : `About ${remaining} m to go`) : step.detail[language]}</p></div>}
+      : <div className="calm-instruction"><span className="calm-step-symbol"><Icon size={44} strokeWidth={1.7}/></span><h1 tabIndex={-1} data-testid="elder-current-instruction">{step.instruction[language]}</h1>
+        {/* How far and which way — the same facts the voice reads, never hidden behind a disclosure. */}
+        {remaining !== undefined && <p className="calm-remaining">{zh ? `大约还有 ${remaining} 米` : `About ${remaining} m to go`}</p>}
+        {step.directions[0] && <p className="calm-heading-line">{step.directions[0][language]}</p>}
+        {remaining === undefined && !step.directions[0] && step.mode === 'walk' && step.distanceMetres != null && <p className="calm-distance">{zh ? `这一段共约 ${step.distanceMetres} 米` : `About ${step.distanceMetres} m on this stretch`}</p>}
+        <p className="calm-place-line">{step.detail[language]}</p></div>}
     <div className="calm-orientation" role="region" aria-label={zh ? '当前步骤方向地图' : 'Current-step orientation map'}><LiveMap journey={journey} original={recovery ? previous : undefined} language={language} currentLegId={step.legId} position={position} density="elder"/>
       <span className="calm-map-caption"><MapPin size={16}/>{position ? (zh ? '蓝点是您当前的位置' : 'The blue dot shows your position') : (zh ? '路线预览 · 开启定位后显示您的位置' : 'Route preview · enable location to see yourself')}</span>
     </div>
@@ -54,7 +59,7 @@ export function ElderGuidance({ journey, language, index, position, remaining, o
       : <button className="calm-primary" onClick={onRepeat}><Volume2/>{zh ? '再说一次' : 'Say it again'}</button>}
     <FamilyContact language={language} phone={phone} onHelp={onHelp}/>
     {controls}
-    {!recovery && step.directions.length>0 && <details className="calm-disclosure"><summary>{zh ? '详细步行指引' : 'Detailed directions'}</summary><ol>{step.directions.map((d,i)=><li key={i}>{d[language]}</li>)}</ol></details>}
+    {!recovery && step.directions.length>1 && <details className="calm-disclosure"><summary>{zh ? '后续步行指引' : 'The rest of this walk'}</summary><ol>{step.directions.slice(1).map((d,i)=><li key={i}>{d[language]}</li>)}</ol></details>}
     <button className="calm-text" onClick={onDetails}>{zh ? '查看完整路线' : 'See the full route'}<ArrowRight size={17}/></button>
   </section>;
 }
