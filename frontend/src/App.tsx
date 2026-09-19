@@ -135,9 +135,12 @@ function App() {
     }
     if (voicePref === "text" || !("speechSynthesis" in window)) return;
     const current = state.journey.steps[state.stepIndex];
-    const utterance = new SpeechSynthesisUtterance(
-      language === "en" ? current.instruction.en : current.instruction.zh,
-    );
+    // Read the whole step, not just the headline: the turn-by-turn directions are the guidance.
+    const spoken = [
+      current.instruction[language],
+      ...current.directions.map((direction) => direction[language]),
+    ].join(" ");
+    const utterance = new SpeechSynthesisUtterance(spoken);
     utterance.lang = language === "en" ? "en-SG" : "zh-CN";
     utterance.rate = 0.85;
     window.speechSynthesis.cancel();
