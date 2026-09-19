@@ -1,15 +1,17 @@
 # NebulaX — Smart Commuter Companion
 
-A mobile-first web app for **Mr Tan, 74**, who travels from Ang Mo Kio to Tan Tock Seng Hospital
-every two weeks for a fixed-time appointment. It plans a step-free, door-to-door route at his own
-walking pace, tells him when to leave, and — when the MRT breaks down — gives him one clear
-instruction in large text and Mandarin, instead of a network map.
+A mobile-first web app for **Mr Tan, 74** — retired, understands mainly Mandarin, with early-stage
+dementia and poor mobility — who travels from Ang Mo Kio to Tan Tock Seng Hospital every two weeks
+for a fixed-time appointment. His daughter **Mei Ling** sets it up with him; from then on it plans a
+step-free, door-to-door route at his own pace, speaks every step aloud and repeats it, quietly
+re-routes him when he takes a wrong turn, and keeps the two of them one tap away from each other for
+the whole journey.
 
 Built for NebulaX 2026, Problem Statement 2 (LTA). The original problem statement lives in
 [`PS2/`](PS2/PS2_README.md).
 
 **Live deployment (Google Cloud Run):** https://nebulax-631606536056.asia-southeast1.run.app
-**Write-up:** `WRITEUP.md` *(in progress)* · **Demo video:** *(link to be added)*
+**Write-up:** [`WRITEUP.md`](WRITEUP.md) · **Demo video:** https://www.youtube.com/watch?v=yHKtHozUN7w
 
 ---
 
@@ -63,12 +65,14 @@ npm run dev
 
 Open **http://localhost:5173** — on a phone on the same network, `http://<your-ip>:5173`.
 
-**Tests** — 39 offline tests, no network or keys required:
+**Tests** — 76 offline backend tests, no network or keys required:
 
 ```bash
 cd backend
 uv run pytest -q
 ```
+
+The frontend has 30 Playwright end-to-end tests (`cd frontend && npx playwright test`).
 
 ## 4. What to try first
 
@@ -96,7 +100,10 @@ arriving by 10:00**.
 endpoints drive everything: `POST /api/journeys/plan` and `POST /api/journeys/{id}/refresh` — full
 schema at `/docs`, examples in [`docs/fixtures/`](docs/fixtures/).
 
-For the two-button before-and-after demo (lift outage + crowded platform), see [Accessibility demo walkthrough](docs/presentation-demo.md).
+For the two-button before-and-after demo (lift outage + crowded platform), open the **Demo panel /
+演示控制台** at the bottom of the running app: step 1 shows the original route, step 2 simulates the
+lift outage + crowded platform and switches to a step-free seated route, and a "Simulate offline"
+toggle shows the saved route working with no signal.
 
 ## 5. Data sources
 

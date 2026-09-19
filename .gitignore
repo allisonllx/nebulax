@@ -13,3 +13,7 @@ probe-output/
 test-results/
 playwright-report/
 dist-live/
+
+# Internal working docs — keep only DEPLOY.md and the JSON examples/fixtures in the repo
+docs/**/*.md
+!docs/DEPLOY.md
