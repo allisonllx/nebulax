@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowRight, BusFront, CalendarDays, Check, Clock3, Footprints, HeartHandshake, MapPin, Phone, ShieldCheck, TrainFront, TriangleAlert, Volume2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BusFront, CalendarDays, Check, Clock3, Footprints, HeartHandshake, MapPin, Phone, ShieldCheck, TrainFront, TriangleAlert, Volume2 } from 'lucide-react';
 import { LiveMap } from './LiveMap';
 import { arrival, time } from './journey';
 import type { Journey, Language, Snapshot } from './journey';
@@ -34,10 +34,11 @@ export function ElderHome({ journey, language, linked, phone, disabled, onStart,
   </section>;
 }
 
-export function ElderGuidance({ journey, language, index, position, remaining, off, recovering, recovered, previous, onContinue, onRepeat, onHelp, phone, controls, onDetails }: {
+export function ElderGuidance({ journey, language, index, position, remaining, off, recovering, recovered, previous, onContinue, onRepeat, onHelp, phone, controls, onDetails, onBack }: {
   journey: Journey; language: Language; index: number; position: {lat:number;lon:number} | null;
   remaining?: number; off: boolean; recovering: boolean; recovered: boolean; previous?: Journey;
   onContinue: () => void; onRepeat: () => void; onHelp: () => void; phone?: string; controls: ReactNode; onDetails: () => void;
+  onBack: () => void;
 }) {
   const zh = language === 'zh'; const step = journey.steps[index];
   const recovery = off || recovering || recovered;
@@ -60,6 +61,7 @@ export function ElderGuidance({ journey, language, index, position, remaining, o
     <FamilyContact language={language} phone={phone} onHelp={onHelp}/>
     {controls}
     {!recovery && step.directions.length>1 && <details className="calm-disclosure"><summary>{zh ? '后续步行指引' : 'The rest of this walk'}</summary><ol>{step.directions.slice(1).map((d,i)=><li key={i}>{d[language]}</li>)}</ol></details>}
+    <button className="calm-text" onClick={onBack}><ArrowLeft size={17}/>{index > 0 ? (zh ? '回到上一步' : 'Back a step') : (zh ? '还没出发，回到首页' : 'Not started yet — go back')}</button>
     <button className="calm-text" onClick={onDetails}>{zh ? '查看完整路线' : 'See the full route'}<ArrowRight size={17}/></button>
   </section>;
 }

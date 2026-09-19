@@ -650,6 +650,39 @@ function App() {
     setState(next);
     go("journey");
   }
+  /** Undo a step: he tapped "I'm here" too early, or finished by mistake. */
+  function goBack() {
+    const current = stateRef.current;
+    if (!current || busy) return;
+    setRecovered(false);
+    if (current.phase === "arrived") {
+      setState({
+        ...current,
+        phase: "active",
+        stepIndex: current.journey.steps.length - 1,
+        progressUpdatedAt: new Date().toISOString(),
+      });
+    } else if (current.stepIndex > 0) {
+      setState({
+        ...current,
+        stepIndex: current.stepIndex - 1,
+        progressUpdatedAt: new Date().toISOString(),
+      });
+    } else {
+      // Back from the first step means he has not really set off yet.
+      setState({
+        ...current,
+        phase: "planned",
+        stepIndex: 0,
+        progressUpdatedAt: new Date().toISOString(),
+      });
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLHeadingElement>("#main h1")?.focus();
+    });
+  }
+
   function advance() {
     if (!state || state.blocked || state.proposal || busy) return;
     setRecovered(false);
@@ -1327,6 +1360,10 @@ function App() {
                     "到达记录已保存在此手机上。未通知家属。",
                   )}
                 </p>
+                <button className="secondary" onClick={goBack}>
+                  <ArrowLeft size={22} />
+                  {t("I have not arrived — go back", "我还没到，回到上一步")}
+                </button>
                 <button className="secondary" onClick={() => go("details")}>
                   {t("View completed journey", "查看已完成行程")}
                   <Route />
@@ -1385,6 +1422,7 @@ function App() {
                     onContinue={() => { setRecovered(false); setPreviousJourney(undefined); }}
                     onRepeat={() => speech.speak(liveFix?.off ? t("Stop somewhere safe. Contact your family if you need help.", "请在安全的地方停下，需要帮助时请联系女儿。") : [step.instruction[language], ...step.directions.map(d => d[language])].join(" "))}
                     onHelp={() => go("help")} phone={state.family.phone} onDetails={() => go("details")}
+                    onBack={goBack}
                     controls={<LocationGuidance key={`${journey.id}-${journey.version}-${step.id}`}
                       journey={journey} stepIndex={state.stepIndex} enabled={locationEnabled}
                       onEnable={setLocationEnabled} language={language}
