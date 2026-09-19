@@ -11,7 +11,7 @@ Built for NebulaX 2026, Problem Statement 2 (LTA). The original problem statemen
 [`PS2/`](PS2/PS2_README.md).
 
 **Live deployment (Google Cloud Run):** https://nebulax-631606536056.asia-southeast1.run.app
-**Write-up:** [`WRITEUP.md`](WRITEUP.md) · **Demo video:** https://www.youtube.com/watch?v=yHKtHozUN7w
+**Write-up:** [`WRITEUP.md`](WRITEUP.md) · **Demo video:** https://youtu.be/_za0B450H4I
 
 ---
 

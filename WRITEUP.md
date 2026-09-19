@@ -190,4 +190,4 @@ Backend: @wuyunkai · Frontend: @allisonllx. Claude Code was used throughout for
 scaffolding, implementation and this document; all API findings were verified against the live
 services, and all tests run offline against recorded responses.
 
-**Demo video:** https://www.youtube.com/watch?v=yHKtHozUN7w
+**Demo video:** https://youtu.be/_za0B450H4I
