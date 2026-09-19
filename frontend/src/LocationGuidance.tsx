@@ -39,6 +39,7 @@ export function LocationGuidance({
   voice,
   enabled,
   onEnable,
+  onStatus,
 }: {
   journey: Journey;
   stepIndex: number;
@@ -49,6 +50,8 @@ export function LocationGuidance({
   voice: boolean;
   enabled: boolean;
   onEnable: (enabled: boolean) => void;
+  /** Reports live progress on the current leg (or null when unreliable) for spoken reminders. */
+  onStatus?: (status: { endMetres: number; off: boolean } | null) => void;
 }) {
   const t = (en: string, zh: string) => (language === "en" ? en : zh);
   const step = journey.steps[stepIndex];
@@ -163,6 +166,16 @@ export function LocationGuidance({
   const near = distances && distances.end <= 35;
   const far = distances && fix && distances.end - fix.accuracy > 80;
   const off = Boolean(away && distances);
+  // Coarse-grained so the parent effect is not re-triggered by GPS jitter.
+  const endMetres = distances ? Math.max(10, Math.round(distances.end / 10) * 10) : null;
+  useEffect(() => {
+    onStatus?.(endMetres === null ? null : { endMetres, off });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endMetres, off]);
+  useEffect(() => {
+    return () => onStatus?.(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   function speak() {
     if (!("speechSynthesis" in window)) return;
     const utterance = new SpeechSynthesisUtterance(message);

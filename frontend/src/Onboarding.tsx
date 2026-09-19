@@ -280,6 +280,29 @@ export function Onboarding({
         choice(repeatSeconds === option.seconds, () => setRepeatSeconds(option.seconds),
           t(option.en, option.zh)),
       )}
+      <label className="onboarding-field">
+        <span>{t("Or enter the exact seconds", "或直接填写具体秒数")}</span>
+        <div className="onboarding-number">
+          <input
+            type="number"
+            min={10}
+            max={600}
+            inputMode="numeric"
+            value={
+              REPEAT_OPTIONS.some((option) => option.seconds === repeatSeconds)
+                ? ""
+                : repeatSeconds || ""
+            }
+            placeholder={t("e.g. 90", "例如 90")}
+            onChange={(event) => {
+              const value = parseInt(event.target.value, 10);
+              if (!Number.isNaN(value))
+                setRepeatSeconds(Math.min(600, Math.max(10, value)));
+            }}
+          />
+          <span>{t("sec", "秒")}</span>
+        </div>
+      </label>
       <p className="onboarding-note">
         {t(
           "Every step is always spoken aloud. This sets how often it repeats while he is on the way — helpful if he forgets what he is doing. You can change it later.",

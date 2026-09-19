@@ -113,6 +113,8 @@ function App() {
     options: import("./journey").Journey[];
   } | null>(null);
   const stateRef = useRef(state);
+  // Latest GPS progress on the current leg, for location-aware spoken reminders.
+  const locationStatusRef = useRef<{ endMetres: number; off: boolean; at: number } | null>(null);
   useLayoutEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -143,21 +145,33 @@ function App() {
     if (!state || state.phase !== "active" || personaMode !== "elder") return;
     if (!("speechSynthesis" in window)) return;
     const current = state.journey.steps[state.stepIndex];
-    // Read the whole step, not just the headline: the turn-by-turn directions are the guidance.
-    const spoken = [
+    // The full step: headline plus the turn-by-turn directions.
+    const fullText = [
       current.instruction[language],
       ...current.directions.map((direction) => direction[language]),
     ].join(" ");
-    const say = () => {
+    const say = (full: boolean) => {
+      // Reminders are location-aware when GPS has a fresh fix on a walking leg;
+      // otherwise they repeat the full instruction.
+      const live = locationStatusRef.current;
+      const fresh = live && Date.now() - live.at < 20000;
+      if (!full && fresh && live.off) return; // the off-route warning owns the audio right now
+      let spoken = fullText;
+      if (!full && fresh && current.mode === "walk") {
+        spoken =
+          language === "en"
+            ? `Keep going. About ${live.endMetres} metres left to ${current.place.en}.`
+            : `继续前进，还剩大约 ${live.endMetres} 米到${current.place.zh}。`;
+      }
       const utterance = new SpeechSynthesisUtterance(spoken);
       utterance.lang = language === "en" ? "en-SG" : "zh-CN";
       utterance.rate = 0.85;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
     };
-    say();
+    say(true);
     if (!repeatSeconds || Number.isNaN(repeatSeconds)) return;
-    const timer = window.setInterval(say, repeatSeconds * 1000);
+    const timer = window.setInterval(() => say(false), repeatSeconds * 1000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.phase, state?.stepIndex, personaMode, language, repeatSeconds]);
@@ -1627,6 +1641,11 @@ function App() {
                           onAdvance={advance}
                           onHelp={() => go("help")}
                           voice={true}
+                          onStatus={(status) => {
+                            locationStatusRef.current = status
+                              ? { ...status, at: Date.now() }
+                              : null;
+                          }}
                         />
                         {state.stepIndex > 0 && (
                           <button
