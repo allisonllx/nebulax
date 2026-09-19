@@ -1,6 +1,8 @@
 """Rank candidate routes for this traveller and time the journey backwards from the appointment."""
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+SGT = timezone(timedelta(hours=8))
 
 from app.models import ArrivalWindow, Journey, Place, PlanRequest, Text
 from app.services.itinerary import CandidatePlan, convert
@@ -38,8 +40,10 @@ def assemble(req: PlanRequest, plan: CandidatePlan, *, now: datetime, journey_id
              version: int = 1, data_mode: str = "live", summary: Text | None = None,
              reasons: list[Text] | None = None, extra_features: list[dict] | None = None,
              origin: Place | None = None, destination: Place | None = None) -> Journey:
+    # Clients may spell the deadline in any timezone; every time we show is Singapore wall clock.
+    arrive_by = req.arrive_by.astimezone(SGT) if req.arrive_by.tzinfo else req.arrive_by.replace(tzinfo=SGT)
     latest_seconds = round(plan.total_seconds * PESSIMISM)
-    departure = _round_down_5min(req.arrive_by - ARRIVAL_BUFFER - timedelta(seconds=latest_seconds))
+    departure = _round_down_5min(arrive_by - ARRIVAL_BUFFER - timedelta(seconds=latest_seconds))
     if summary is None:
         hh, mm = departure.strftime("%H"), departure.strftime("%M")
         summary = Text(en=f"Your route is ready. Leave by {departure.strftime('%-I:%M %p').lower()}.",
@@ -50,7 +54,7 @@ def assemble(req: PlanRequest, plan: CandidatePlan, *, now: datetime, journey_id
         id=journey_id or f"trip-{uuid.uuid4().hex[:8]}",
         origin=origin, destination=destination,
         version=version, data_mode=data_mode, updated_at=now,
-        arrive_by=req.arrive_by, departure_time=departure,
+        arrive_by=arrive_by, departure_time=departure,
         arrival_window=ArrivalWindow(earliest=departure + timedelta(seconds=plan.total_seconds),
                                      latest=departure + timedelta(seconds=latest_seconds)),
         walk_distance_metres=plan.walk_distance_metres, transfers=plan.transfers,

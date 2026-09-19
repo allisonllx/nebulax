@@ -9,7 +9,7 @@ ARRIVE_BY = datetime(2026, 9, 21, 10, 0, tzinfo=SGT)
 
 
 def request(**overrides):
-    return PlanRequest(arrive_by=ARRIVE_BY, **overrides)
+    return PlanRequest(**{"arrive_by": ARRIVE_BY, **overrides})
 
 
 def build(transit, bus, **overrides):
@@ -68,3 +68,17 @@ def test_slower_walker_gets_an_earlier_departure(transit_itineraries, bus_itiner
     slow = build(transit_itineraries, bus_itineraries, walking_speed_factor=0.5)
 
     assert slow.departure_time < normal.departure_time
+
+
+def test_a_utc_arrive_by_is_normalised_to_singapore_time(transit_itineraries, bus_itineraries):
+    utc = timezone.utc
+    # 02:00 UTC == 10:00 SGT — the same instant, spelled in the wrong zone by a client.
+    journey = build_journey(request(arrive_by=datetime(2026, 9, 21, 2, 0, tzinfo=utc)),
+                            transit_itineraries + bus_itineraries,
+                            origin=SAVED_PLACES["saved-home"], destination=SAVED_PLACES["ttsh-entrance"],
+                            now=datetime(2026, 9, 21, 8, 5, tzinfo=SGT))
+
+    assert journey.arrive_by.utcoffset() == timedelta(hours=8)
+    assert journey.arrive_by.hour == 10
+    assert journey.departure_time.utcoffset() == timedelta(hours=8)
+    assert journey.departure_time.hour == 8  # leaves that morning, not in another timezone's night

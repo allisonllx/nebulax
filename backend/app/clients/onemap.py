@@ -1,7 +1,9 @@
 """OneMap routing client. Tokens expire every 3 days; refresh from email + password when configured."""
 import asyncio
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+SGT = timezone(timedelta(hours=8))
 
 import httpx
 
@@ -47,10 +49,11 @@ class OneMapClient:
     async def route_candidates(self, origin, destination, arrive_by: datetime) -> list[dict]:
         """Transit and bus-only itineraries for the trip, as raw OneMap dicts."""
         token = await self._current_token()
+        local = arrive_by.astimezone(SGT) if arrive_by.tzinfo else arrive_by.replace(tzinfo=SGT)
         params_common = {
             "start": f"{origin.lat},{origin.lon}", "end": f"{destination.lat},{destination.lon}",
-            "routeType": "pt", "date": arrive_by.strftime("%m-%d-%Y"),
-            "time": arrive_by.strftime("%H:%M:%S"),
+            "routeType": "pt", "date": local.strftime("%m-%d-%Y"),
+            "time": local.strftime("%H:%M:%S"),
             "maxWalkDistance": 1000, "numItineraries": 3,
         }
         out: list[dict] = []

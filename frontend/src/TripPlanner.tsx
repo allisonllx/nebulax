@@ -25,6 +25,22 @@ export function TripPlanner({ language, onPlanned }: Props) {
   const [options, setOptions] = useState<Journey[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [arriveLabel, setArriveLabel] = useState("");
+
+  /** Target arrival: ~90 min from now in Singapore time, nudged into transit service hours. */
+  function arriveBySingapore(): { iso: string; label: string } {
+    const sgt = new Date(Date.now() + 8 * 3600_000 + 90 * 60_000); // SGT wall clock in UTC fields
+    const hours = sgt.getUTCHours() + sgt.getUTCMinutes() / 60;
+    if (hours < 7.5) sgt.setUTCHours(9, 0, 0, 0);
+    else if (hours > 21.5) {
+      sgt.setUTCDate(sgt.getUTCDate() + 1);
+      sgt.setUTCHours(9, 0, 0, 0);
+    }
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const iso = `${sgt.getUTCFullYear()}-${pad(sgt.getUTCMonth() + 1)}-${pad(sgt.getUTCDate())}` +
+      `T${pad(sgt.getUTCHours())}:${pad(sgt.getUTCMinutes())}:00+08:00`;
+    return { iso, label: `${pad(sgt.getUTCHours())}:${pad(sgt.getUTCMinutes())}` };
+  }
 
   async function plan() {
     if (!origin || !destination) return;
@@ -32,7 +48,8 @@ export function TripPlanner({ language, onPlanned }: Props) {
     setError("");
     setOptions(null);
     try {
-      const arriveBy = new Date(Date.now() + 90 * 60000).toISOString();
+      const { iso: arriveBy, label } = arriveBySingapore();
+      setArriveLabel(label);
       const { journey, alternatives } = await planJourneyWithOptions({
         origin,
         destination,
@@ -66,6 +83,11 @@ export function TripPlanner({ language, onPlanned }: Props) {
       {error && <p className="status-note">{error}</p>}
       {options && (
         <div className="planner-options">
+          {arriveLabel && (
+            <p className="onboarding-note">
+              {t(`Planned to arrive by ${arriveLabel}.`, `按 ${arriveLabel} 前到达计算。`)}
+            </p>
+          )}
           {options.map((option, index) => {
             const modes = new Set(option.steps.map((s) => s.mode));
             const name = modes.has("train")
