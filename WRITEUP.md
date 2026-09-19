@@ -2,15 +2,16 @@
 
 ## Background: the gap we set out to close
 
-Singapore's public transport is among the most efficient in the world, yet for vulnerable commuters —
-especially the frail elderly — the apps that plan their journeys fall short at exactly the moments that
-matter. MyTransport, Google Maps and the like give competent routes, but they are built for an able,
-English-reading commuter who can improvise. They assume you can read small text, understand English,
+Singapore’s public transport system is one of the most efficient systems in the world today. However, there is a hidden gap that our group discovers that affects Singapore’s land transport system. For vulnerable users like the elderly, our existing system may falter at the critical moments.
+
+Here are some problems identified by our team：
+1) They assume you can read small text, understand English,
 climb a flight of stairs when a lift is out, stand on a crowded platform, and calmly compare a screen
 full of options when something goes wrong. For someone who cannot, the same app becomes the problem: it
 overwhelms with choices instead of giving one clear instruction, and it says nothing about the things
 that actually stop him — a lift under maintenance at his exit, or a platform too crowded to wait on
 safely.
+2) Our platforms, for example the MyTransport App and Google Maps have different routes provided, but there are no first mile, last mile and no real-time disruption alerts (e.g. lift breakdown alerts) at stations.
 
 We set out to close that gap for one such commuter and the family member who worries about him. Rather
 than a general trip planner, we built a companion that plans around *his* body and memory, speaks to him
@@ -52,6 +53,19 @@ rather than just storing preferences:
 
 ### 2.2 What we do that a general transit app does not
 
+Our app will introduce 3 key elements: user personalised demographic, navigation explained in one step, and offline user resilience when users are underground.
+
+Key element 1: Personalised user demographic
+Based on the user’s walking pace, and preferences (e.g. step-free access), the travel time will be calculated from there, ensuring that the travel time is more accurate.
+Key preferences like language and size of text will be considered.
+
+Key element 2: Navigation explained in 1 step
+In the event of a disruption, the announcement will be generated as follows (voice will also be generated if necessary), for example: “Turn right and take the escalator, then walk straight to Exit B). The voice can be repeated every 30 seconds, 1 minute, 90 seconds or 2 minutes, which can be edited in the app’s settings.
+
+Key element 3: Offline app resilience
+In the event the app is underground, trip details remain accessible.
+
+How does this apply to Mr. Tan's case study?
 - **Spoken guidance that repeats on a timer.** Every step is read aloud and, because he forgets where
   he is, repeats on the interval set in the quiz (default 30 s) — each time with the *remaining
   distance and direction*, not the same sentence. He never has to remember what he is doing.
