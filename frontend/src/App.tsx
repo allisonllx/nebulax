@@ -1409,13 +1409,19 @@ function App() {
                           <MapPin size={18} />
                           {step.place[language]}
                         </p>
+                        {step.directions.length > 0 && (
+                          <ol className="direction-list">
+                            {step.directions.map((direction, index) => (
+                              <li key={index}>{direction[language]}</li>
+                            ))}
+                          </ol>
+                        )}
                         <p className="instruction-detail">
                           {step.detail[language]}
                         </p>
                         {listen(
-                          step.instruction[language] +
-                            ". " +
-                            step.detail[language],
+                          [step.instruction[language],
+                           ...step.directions.map((direction) => direction[language])].join(" "),
                         )}
                         <button
                           className="primary"
@@ -1490,7 +1496,13 @@ function App() {
                     </div>
                   </div>
                   <aside className="journey-aside">
-                    <LiveMap journey={journey} language={language} />
+                    <LiveMap
+                      journey={journey}
+                      language={language}
+                      currentLegId={
+                        state.phase === "active" ? step?.legId : undefined
+                      }
+                    />
                     <div className="conditions-card">
                       <div>
                         <span className="status-dot" />

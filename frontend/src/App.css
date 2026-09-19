@@ -2019,3 +2019,18 @@ legend {
 .map-pin-end {
   background: #a84239;
 }
+
+/* --- Turn-by-turn walking directions ---------------------------------------- */
+.direction-list {
+  margin: 4px 0 10px;
+  padding-left: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+.direction-list li::marker {
+  color: #3e6b4f;
+  font-weight: 700;
+}

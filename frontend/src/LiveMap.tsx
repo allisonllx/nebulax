@@ -25,6 +25,8 @@ interface Props {
   journey: Journey;
   /** When comparing, the route being replaced — drawn grey underneath. */
   original?: Journey;
+  /** Highlight and zoom to this leg — the "which way do I walk" view. */
+  currentLegId?: string;
   language: Language;
 }
 
@@ -53,7 +55,7 @@ function boundsOf(collection: FeatureCollection) {
 }
 
 /** A real OpenStreetMap basemap (MapTiler tiles) with the journey drawn on top. */
-export function LiveMap({ journey, original, language }: Props) {
+export function LiveMap({ journey, original, currentLegId, language }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const t = (en: string, zh: string) => (language === "en" ? en : zh);
@@ -104,6 +106,7 @@ export function LiveMap({ journey, original, language }: Props) {
           paint: { "line-width": 5, "line-color": "#4a6b52", "line-dasharray": [0.4, 1.8] },
         });
         map.current = instance;
+        focus(instance, journey, original, currentLegId);
       } catch {
         /* style not ready yet — a later event will retry */
       }
@@ -114,6 +117,7 @@ export function LiveMap({ journey, original, language }: Props) {
     instance.on("style.load", ensureLayers);
     instance.on("load", ensureLayers);
     instance.once("idle", ensureLayers);
+    focus(instance, journey, original, currentLegId);
     fit(instance, journey, original);
     mark(instance, journey, language);
     return () => {
@@ -130,9 +134,14 @@ export function LiveMap({ journey, original, language }: Props) {
     const source = instance.getSource("route") as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
     source.setData(collectFeatures(journey, original));
-    fit(instance, journey, original);
+    focus(instance, journey, original, currentLegId);
     mark(instance, journey, language);
-  }, [journey, original, language]);
+  }, [journey, original, currentLegId, language]);
+  useEffect(() => {
+    const instance = map.current;
+    if (instance?.getSource("route")) focus(instance, journey, original, currentLegId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLegId]);
 
   if (!KEY) {
     return (
@@ -173,4 +182,29 @@ function mark(instance: maplibregl.Map, journey: Journey, language: Language) {
 function fit(instance: maplibregl.Map, journey: Journey, original?: Journey) {
   const bounds = boundsOf(collectFeatures(journey, original));
   if (!bounds.isEmpty()) instance.fitBounds(bounds, { padding: 44, animate: false, maxZoom: 15.5 });
+}
+
+/** Zoom to the active leg and fade the rest; with no active leg, show the whole journey. */
+function focus(instance: maplibregl.Map, journey: Journey, original: Journey | undefined,
+               currentLegId: string | undefined) {
+  const dim: maplibregl.ExpressionSpecification | number = currentLegId
+    ? ["case", ["==", ["get", "legId"], currentLegId], 1, 0.25]
+    : 1;
+  for (const layer of ["route-current-ride", "route-current-walk"]) {
+    if (instance.getLayer(layer)) instance.setPaintProperty(layer, "line-opacity", dim);
+  }
+  if (!currentLegId) {
+    fit(instance, journey, original);
+    return;
+  }
+  const leg = journey.routeGeometry.features.find(
+    (feature) => (feature.properties as { legId?: string }).legId === currentLegId,
+  );
+  if (leg && leg.geometry.type === "LineString") {
+    const bounds = new maplibregl.LngLatBounds();
+    for (const position of leg.geometry.coordinates) bounds.extend(position as [number, number]);
+    instance.fitBounds(bounds, { padding: 60, animate: false, maxZoom: 16.5 });
+  } else {
+    fit(instance, journey, original);
+  }
 }

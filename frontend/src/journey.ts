@@ -20,6 +20,7 @@ const geometry = z.object({
       properties: z.object({
         mode: z.enum(["walk", "train", "bus"]),
         affected: z.boolean().optional(),
+        legId: z.string().optional(),
       }),
       geometry: z.object({
         type: z.literal("LineString"),
@@ -50,8 +51,10 @@ export const journeySchema = z.object({
     .array(
       z.object({
         id: z.string(),
+        legId: z.string().optional(),
         mode: z.enum(["walk", "train", "bus", "lift"]),
         instruction: bilingual,
+        directions: z.array(bilingual).default([]),
         detail: bilingual,
         confirmation: bilingual,
         durationMinutes: z.number().nonnegative(),
@@ -118,6 +121,7 @@ export const demoJourney: Journey = {
         "慢慢走。到达地铁站后，寻找电梯标志。",
       ),
       confirmation: text("I'm at the station", "我已到达地铁站"),
+      directions: [],
       durationMinutes: 10,
       place: text("Home → Ang Mo Kio · NS16", "家 → 宏茂桥 · NS16"),
     },
@@ -130,6 +134,7 @@ export const demoJourney: Journey = {
         "跟随南北线往滨海南码头方向的标志。如果找不到电梯，请向车站工作人员求助。",
       ),
       confirmation: text("I'm on the platform", "我已到达站台"),
+      directions: [],
       durationMinutes: 5,
       place: text("Ang Mo Kio · NS16", "宏茂桥 · NS16"),
     },
@@ -142,6 +147,7 @@ export const demoJourney: Journey = {
         "往滨海南码头方向，共4站：碧山、布莱德、 大巴窑，然后到诺维娜。下车后请确认。",
       ),
       confirmation: text("I've reached Novena", "我已到达诺维娜"),
+      directions: [],
       durationMinutes: 15,
       place: text("NS16 → NS20 · North South Line", "NS16 → NS20 · 南北线"),
     },
@@ -154,6 +160,7 @@ export const demoJourney: Journey = {
         "寻找电梯标志。请向工作人员确认前往医院的无障碍出口。",
       ),
       confirmation: text("I'm at the concourse", "我已到达大厅"),
+      directions: [],
       durationMinutes: 5,
       place: text("Novena · NS20", "诺维娜 · NS20"),
     },
@@ -169,6 +176,7 @@ export const demoJourney: Journey = {
         "跟随陈笃生医院的标志。到达目的地后再确认。",
       ),
       confirmation: text("I have arrived", "我已到达"),
+      directions: [],
       durationMinutes: 15,
       place: text("Novena → Tan Tock Seng Hospital", "诺维娜 → 陈笃生医院"),
     },

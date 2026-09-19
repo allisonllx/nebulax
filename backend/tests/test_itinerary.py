@@ -96,3 +96,23 @@ def test_step_free_is_unverified_until_someone_checks(mrt_itinerary):
     plan = convert(mrt_itinerary, pace_factor=0.6)
 
     assert {s.step_free for s in plan.steps} == {"unverified"}
+
+
+def test_walk_steps_carry_turn_by_turn_directions(mrt_itinerary):
+    plan = convert(mrt_itinerary, pace_factor=0.6)
+
+    first_walk = next(s for s in plan.steps if s.mode == "walk")
+    assert first_walk.directions, "walking steps must offer at least a departure direction"
+    assert "北" in first_walk.directions[0].zh          # recorded leg departs NORTH
+    assert "120" in first_walk.directions[0].zh         # and is ~120 m
+    assert "north" in first_walk.directions[0].en.lower()
+
+
+def test_station_suffix_is_not_duplicated_for_english_station_names():
+    from app.models import Text
+    from app.services import instructions
+
+    text = instructions.walk(4, Text(en="Boon Lay MRT Station", zh="Boon Lay MRT Station"), True)
+
+    assert text.zh.count("地铁站") + text.zh.lower().count("mrt station") == 1
+    assert "Station MRT station" not in text.en

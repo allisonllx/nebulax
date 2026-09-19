@@ -32,6 +32,7 @@ class Step(ApiModel):
     service: str | None = None
     instruction: Text
     detail: Text
+    directions: list[Text] = []  # street-level guidance for walking steps
     confirmation: Text
     place: Text
     duration_minutes: int = 0

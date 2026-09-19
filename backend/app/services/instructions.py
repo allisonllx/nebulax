@@ -4,9 +4,55 @@ from app.reference import LINES, station_number
 
 
 def walk(minutes: int, to: Text, to_is_station: bool) -> Text:
-    suffix_en, suffix_zh = (" MRT station", "地铁站") if to_is_station else ("", "")
+    already_named = "station" in to.en.lower() or "地铁站" in to.zh
+    suffix_en, suffix_zh = (" MRT station", "地铁站") if to_is_station and not already_named else ("", "")
     return Text(en=f"Walk about {minutes} minutes to {to.en}{suffix_en}.",
                 zh=f"步行大约 {minutes} 分钟,到{to.zh}{suffix_zh}。")
+
+
+_COMPASS = {
+    "NORTH": Text(en="north", zh="北面"), "NORTHEAST": Text(en="north-east", zh="东北面"),
+    "EAST": Text(en="east", zh="东面"), "SOUTHEAST": Text(en="south-east", zh="东南面"),
+    "SOUTH": Text(en="south", zh="南面"), "SOUTHWEST": Text(en="south-west", zh="西南面"),
+    "WEST": Text(en="west", zh="西面"), "NORTHWEST": Text(en="north-west", zh="西北面"),
+}
+_TURNS = {
+    "LEFT": Text(en="Turn left", zh="左转"), "RIGHT": Text(en="Turn right", zh="右转"),
+    "SLIGHTLY_LEFT": Text(en="Bear left", zh="稍向左"), "SLIGHTLY_RIGHT": Text(en="Bear right", zh="稍向右"),
+    "HARD_LEFT": Text(en="Turn sharply left", zh="向左急转"), "HARD_RIGHT": Text(en="Turn sharply right", zh="向右急转"),
+    "CONTINUE": Text(en="Continue straight", zh="直走"),
+    "UTURN_LEFT": Text(en="Turn around", zh="掉头"), "UTURN_RIGHT": Text(en="Turn around", zh="掉头"),
+}
+
+
+def _street(name: str) -> Text:
+    if not name or name.lower() in ("path", "footpath", "sidewalk", "road", "steps"):
+        return Text(en="the walking path", zh="步行道")
+    return Text(en=name.title(), zh=name.title())
+
+
+def walk_directions(raw_steps: list[dict]) -> list[Text]:
+    """OneMap's street-level walking steps -> spoken-ready sentences. Compass words pair with the
+    north-up map; we never invent landmarks the data does not contain."""
+    out: list[Text] = []
+    for raw in raw_steps:
+        metres = max(round(float(raw.get("distance", 0))), 1)
+        street = _street(raw.get("streetName") or "")
+        relative = (raw.get("relativeDirection") or "").upper()
+        if relative == "DEPART" or not out and relative not in _TURNS:
+            compass = _COMPASS.get((raw.get("absoluteDirection") or "").upper())
+            if compass:
+                out.append(Text(
+                    en=f"Set off towards the {compass.en}, along {street.en} for about {metres} m.",
+                    zh=f"朝{compass.zh}出发,沿{street.zh}走大约 {metres} 米。"))
+            else:
+                out.append(Text(en=f"Walk along {street.en} for about {metres} m.",
+                                zh=f"沿{street.zh}走大约 {metres} 米。"))
+        else:
+            turn = _TURNS.get(relative, Text(en="Continue", zh="继续走"))
+            out.append(Text(en=f"{turn.en}, then follow {street.en} for about {metres} m.",
+                            zh=f"{turn.zh},沿{street.zh}走大约 {metres} 米。"))
+    return out
 
 
 def board_bus(service: str) -> Text:
