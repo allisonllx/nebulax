@@ -699,7 +699,10 @@ function App() {
                   {state.phase === "active"
                     ? t("Dad is on his way.", "爸爸正在路上。")
                     : state.phase === "arrived"
-                      ? t("Dad has arrived safely.", "爸爸已安全到达医院。")
+                      ? t(
+                          `Dad has arrived safely at ${journey.destination?.name.en ?? "the hospital"}.`,
+                          `爸爸已安全到达${journey.destination?.name.zh ?? "医院"}。`,
+                        )
                       : t("Dad has not left yet.", "爸爸还没出发。")}
                 </h1>
                 {state.family.linked && state.family.scopes.tripUpdates ? (
@@ -744,8 +747,8 @@ function App() {
                       ) : (
                         <p className="caregiver-step">
                           {t(
-                            "The appointment journey is complete.",
-                            "本次就诊行程已完成。",
+                            `The journey to ${journey.destination?.name.en ?? "the hospital"} is complete.`,
+                            `前往${journey.destination?.name.zh ?? "医院"}的行程已完成。`,
                           )}
                         </p>
                       )}
@@ -1121,7 +1124,11 @@ function App() {
                 <div className="destination-compact">
                   <Hospital />
                   <div>
-                    <h2>{t("Tan Tock Seng Hospital", "陈笃生医院")}</h2>
+                    <h2>
+                      {journey.destination
+                        ? journey.destination.name[language]
+                        : t("Tan Tock Seng Hospital", "陈笃生医院")}
+                    </h2>
                     <p>{appointmentLabel(state.appointment, language)}</p>
                   </div>
                 </div>
@@ -1224,7 +1231,10 @@ function App() {
                           </span>
                           <div>
                             <span className="eyebrow">
-                              {t("HOSPITAL APPOINTMENT", "医院预约")}
+                              {!journey.destination ||
+                              journey.destination.name.en.toLowerCase().includes("hospital")
+                                ? t("HOSPITAL APPOINTMENT", "医院预约")
+                                : t("YOUR TRIP", "您的行程")}
                             </span>
                             <h2>
                               {journey.destination
