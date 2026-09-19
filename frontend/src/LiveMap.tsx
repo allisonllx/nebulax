@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -30,6 +30,7 @@ interface Props {
   /** His live GPS position, drawn as a blue dot. */
   position?: { lat: number; lon: number } | null;
   language: Language;
+  density?: "elder" | "caregiver";
 }
 
 function collectFeatures(journey: Journey, original?: Journey) {
@@ -57,9 +58,10 @@ function boundsOf(collection: FeatureCollection) {
 }
 
 /** A real OpenStreetMap basemap (MapTiler tiles) with the journey drawn on top. */
-export function LiveMap({ journey, original, currentLegId, position, language }: Props) {
+export function LiveMap({ journey, original, currentLegId, position, language, density }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const [tileError, setTileError] = useState(false);
   const t = (en: string, zh: string) => (language === "en" ? en : zh);
 
   useEffect(() => {
@@ -72,6 +74,9 @@ export function LiveMap({ journey, original, currentLegId, position, language }:
       attributionControl: { compact: true },
       cooperativeGestures: true,
     });
+    instance.on("error", () => setTileError(true));
+    instance.dragRotate.disable();
+    instance.touchZoomRotate.disableRotation();
     const ensureLayers = () => {
       if (map.current === instance || instance.getSource("route")) return;
       try {
@@ -105,10 +110,11 @@ export function LiveMap({ journey, original, currentLegId, position, language }:
           id: "route-current-walk", type: "line", source: "route",
           filter: ["all", ["!=", ["get", "role"], "previous"], ["==", ["get", "mode"], "walk"]],
           layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-width": 5, "line-color": "#4a6b52", "line-dasharray": [0.4, 1.8] },
+          paint: { "line-width": 6, "line-color": "#205d46" },
         });
         map.current = instance;
         focus(instance, journey, original, currentLegId);
+        markPosition(instance, position);
       } catch {
         /* style not ready yet — a later event will retry */
       }
@@ -120,9 +126,12 @@ export function LiveMap({ journey, original, currentLegId, position, language }:
     instance.on("load", ensureLayers);
     instance.once("idle", ensureLayers);
     focus(instance, journey, original, currentLegId);
-    fit(instance, journey, original);
-    mark(instance, journey, language);
+    mark(instance, journey, language, currentLegId);
     return () => {
+      const own = mapMarkers.get(instance);
+      own?.markers.forEach(marker => marker.remove());
+      own?.position?.remove();
+      mapMarkers.delete(instance);
       map.current = null;
       instance.remove();
     };
@@ -137,7 +146,7 @@ export function LiveMap({ journey, original, currentLegId, position, language }:
     if (!source) return;
     source.setData(collectFeatures(journey, original));
     focus(instance, journey, original, currentLegId, position);
-    mark(instance, journey, language);
+    mark(instance, journey, language, currentLegId);
     markPosition(instance, position);
   }, [journey, original, currentLegId, position, language]);
   useEffect(() => {
@@ -149,40 +158,66 @@ export function LiveMap({ journey, original, currentLegId, position, language }:
 
   if (!KEY) {
     return (
-      <div className="live-map live-map-missing">
-        {t("Map unavailable: missing map key.", "地图不可用：缺少地图密钥。")}
-      </div>
+      <RouteSketch journey={journey} position={position} language={language} />
     );
   }
-  return <div ref={container} className="live-map" aria-label={t("Route map", "路线地图")} />;
+  return <div className="calm-map-shell"><div ref={container} className={`live-map ${density === "elder" ? "elder-map" : ""}`} aria-label={t("Route map", "路线地图")} />{tileError && <p className="calm-map-error" role="status">{t("Street map unavailable · route only", "街道底图暂不可用 · 仅显示路线")}</p>}</div>;
 }
 
-const markers: maplibregl.Marker[] = [];
-let positionMarker: maplibregl.Marker | null = null;
+const mapMarkers = new WeakMap<maplibregl.Map, {markers: maplibregl.Marker[]; position: maplibregl.Marker | null}>();
+function ownMarkers(instance: maplibregl.Map) {
+  let own = mapMarkers.get(instance);
+  if (!own) { own = {markers: [], position: null}; mapMarkers.set(instance, own); }
+  return own;
+}
+function RouteSketch({ journey, position, language }: Props) {
+  const lines = journey.routeGeometry.features.map(f => f.geometry.coordinates);
+  const points = lines.flat();
+  if (position) points.push([position.lon, position.lat]);
+  if (!points.length) return <div className="live-map-missing">{language === 'zh' ? '暂无路线' : 'No route available'}</div>;
+  const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const span = Math.max(maxX-minX, maxY-minY, .001);
+  const point = (p: number[]) => [180+(p[0]-(minX+maxX)/2)/span*170, 100-(p[1]-(minY+maxY)/2)/span*170];
+  return <div className="calm-route-fallback" role="img" aria-label={language === 'zh' ? '路线示意图' : 'Route diagram'}>
+    <svg viewBox="0 0 360 200">{lines.map((line,i) => <polyline key={i} points={line.map(p=>point(p).join(',')).join(' ')} fill="none" stroke="#205d46" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>)}
+      {position && <g transform={`translate(${point([position.lon,position.lat]).join(',')})`}><circle r="12" fill="#287dea" stroke="white" strokeWidth="4"/><text y="32" textAnchor="middle" fill="#175db5" fontSize="14">{language==='zh'?'您在这里':'You are here'}</text></g>}
+    </svg><p>{language==='zh'?'街道底图暂不可用 · 仅显示规划路线':'Street map unavailable · planned route only'}</p>
+  </div>;
+}
 
 /** His live position: a pulsing blue dot, updated in place. */
 function markPosition(
   instance: maplibregl.Map,
   position: { lat: number; lon: number } | null | undefined,
 ) {
+  const own = ownMarkers(instance);
+  let positionMarker = own.position;
   if (!position) {
     positionMarker?.remove();
     positionMarker = null;
+    own.position = null;
     return;
   }
   if (!positionMarker) {
     const element = document.createElement("div");
     element.className = "map-me";
+    const label = document.createElement("span");
+    label.className = "map-me-label";
+    label.textContent = document.documentElement.lang.startsWith("zh") ? "您在这里" : "You are here";
+    element.append(label);
     positionMarker = new maplibregl.Marker({ element })
       .setLngLat([position.lon, position.lat])
       .addTo(instance);
+    own.position = positionMarker;
   } else {
     positionMarker.setLngLat([position.lon, position.lat]);
     if (!positionMarker._map) positionMarker.addTo(instance);
   }
 }
 
-function mark(instance: maplibregl.Map, journey: Journey, language: Language) {
+function mark(instance: maplibregl.Map, journey: Journey, language: Language, currentLegId?: string) {
+  const markers = ownMarkers(instance).markers;
   while (markers.length) markers.pop()?.remove();
   const line = journey.routeGeometry.features[0]?.geometry;
   const lastLine = journey.routeGeometry.features.at(-1)?.geometry;
@@ -198,11 +233,18 @@ function mark(instance: maplibregl.Map, journey: Journey, language: Language) {
     element.textContent = text;
     return element;
   };
+  const activeLeg = currentLegId ? journey.routeGeometry.features.find(f => f.properties.legId === currentLegId) : undefined;
+  const nextStop = activeLeg?.geometry.coordinates.at(-1);
+  const activeStep = journey.steps.find(s => s.legId === currentLegId);
+  if (nextStop && activeStep) {
+    markers.push(new maplibregl.Marker({ element: label(activeStep.place[language], "next") }).setLngLat(nextStop).addTo(instance));
+    return;
+  }
   if (start)
-    markers.push(new maplibregl.Marker({ element: label(journey.origin?.name[language] ?? "", "start") })
+    markers.push(new maplibregl.Marker({ element: label(journey.origin?.name[language] ?? (language === "zh" ? "起点" : "Start"), "start") })
       .setLngLat(start as [number, number]).addTo(instance));
   if (end)
-    markers.push(new maplibregl.Marker({ element: label(journey.destination?.name[language] ?? "", "end") })
+    markers.push(new maplibregl.Marker({ element: label(journey.destination?.name[language] ?? (language === "zh" ? "目的地" : "Destination"), "end") })
       .setLngLat(end as [number, number]).addTo(instance));
 }
 
@@ -217,7 +259,7 @@ function focus(instance: maplibregl.Map, journey: Journey, original: Journey | u
                currentLegId: string | undefined,
                position?: { lat: number; lon: number } | null) {
   const dim: maplibregl.ExpressionSpecification | number = currentLegId
-    ? ["case", ["==", ["get", "legId"], currentLegId], 1, 0.25]
+    ? ["case", ["==", ["get", "legId"], currentLegId], 1, 0.12]
     : 1;
   for (const layer of ["route-current-ride", "route-current-walk"]) {
     if (instance.getLayer(layer)) instance.setPaintProperty(layer, "line-opacity", dim);

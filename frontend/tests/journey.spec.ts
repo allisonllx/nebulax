@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { seed } from "./setup";
+test.beforeEach(async ({page}) => { await seed(page); });
 
 // Catches lost progress or a network-only shell after an offline reopen.
 test("saved journey and confirmed progress survive a real offline reload", async ({
@@ -13,7 +15,7 @@ test("saved journey and confirmed progress survive a real offline reload", async
     .getByRole("button", { name: "Start journey", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "I'm at the station", exact: true })
+    .getByRole("button", { name: "I’m here — show next step", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Take the lift to the platform" }),
@@ -56,6 +58,7 @@ test("a proposed route stays separate until accepted", async ({ page }) => {
     page.getByRole("heading", { name: "Walk to Ang Mo Kio station" }),
   ).toBeVisible();
   await page.reload();
+  await page.getByRole("button", {name:"See the full route",exact:true}).click();
   await expect(
     page.getByText("9:43–9:53", { exact: true }).first(),
   ).toBeVisible();
@@ -112,11 +115,11 @@ test("arrival requires confirming the final step", async ({ page }) => {
     .getByRole("button", { name: "Start journey", exact: true })
     .click();
   for (const name of [
-    "I'm at the station",
-    "I'm on the platform",
-    "I've reached Novena",
-    "I'm at the concourse",
-    "I have arrived",
+    "I’m here — show next step",
+    "I’m here — show next step",
+    "I’m here — show next step",
+    "I’m here — show next step",
+    "I’m here — finish journey",
   ]) {
     await page.getByRole("button", { name, exact: true }).click();
   }

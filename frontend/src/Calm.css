@@ -1,0 +1,89 @@
+.calm-app { --green:#164f3f; --cream:#fbf9f3; --ink:#173c30; background:var(--cream); color:var(--ink); min-height:100svh; padding-bottom:0; }
+.calm-app .site-header { max-width:560px; min-height:76px; padding:16px 22px; gap:12px; }
+.calm-app .brand { font-size:23px; gap:9px; letter-spacing:-.6px; }
+.calm-app .brand-mark { width:36px; height:36px; border-radius:12px; }
+.calm-app .brand small { display:none; }
+.calm-app .language-button { padding:0 9px; font-size:14px; background:transparent; border:0; }
+.calm-app .settings-button { border:0; background:transparent; width:40px; }
+.calm-app .header-actions { gap:0; }
+.calm-app .demo-ribbon { font-size:11px; padding:5px 16px; background:#f0f1e7; border:0; }
+.calm-app .main-shell { max-width:560px; padding:24px 22px 12px; }
+.calm-app .primary-nav { max-width:560px; margin:auto; }
+.calm-app .primary-nav button { font-size:14px; padding:10px; min-width:0; }
+.calm-home,.calm-guidance,.calm-caregiver { display:flex; flex-direction:column; gap:14px; }
+.calm-eyebrow { display:block; font-size:12px; font-weight:650; letter-spacing:1.3px; color:#647c6c; margin-bottom:12px; }
+.calm-welcome h1,.calm-caregiver h1 { font-size:32px; line-height:1.2; letter-spacing:-.8px; text-wrap:initial; }
+.calm-welcome p { color:#5d7469; font-size:17px; margin-top:10px; }
+.calm-home-art { height:130px; position:relative; display:flex; align-items:center; justify-content:space-evenly; background:linear-gradient(165deg,#eff3e4,#e3eddb); border-radius:90px 90px 24px 24px; margin:10px 0 -30px; color:#597b56; overflow:hidden; }
+.calm-art-path { width:90px; border-top:3px dashed #96af8d; transform:rotate(-16deg); }
+.calm-appointment { display:grid; grid-template-columns:32px minmax(0,1fr); gap:12px; background:#edf2e5; border:8px solid #fffdf7; border-radius:24px; padding:20px 14px 14px; z-index:1; }
+.calm-appointment>svg { margin-top:5px; }
+.calm-appointment span { font-size:13px; color:#627960; }
+.calm-appointment h2 { font-size:24px; line-height:1.35; overflow-wrap:anywhere; margin-top:4px; }
+.calm-departure { font-size:37px; line-height:1.25; font-weight:750; margin-top:12px; font-variant-numeric:tabular-nums; }
+.calm-departure small { font-size:20px; font-weight:600; }
+.calm-prepared { grid-column:1/-1; font-size:15px; text-align:center; color:#587564; padding-top:16px; margin-top:6px; border-top:1px solid #d2ddc9; }
+.calm-primary,.calm-contact { width:100%; min-height:64px; padding:16px; display:flex; align-items:center; justify-content:center; gap:13px; border-radius:18px; border:1.5px solid var(--green); font-size:23px; font-weight:700; text-decoration:none; line-height:1.3; }
+.calm-primary { background:var(--green); color:#fff; }
+.calm-primary:hover { background:#103d30; }
+.calm-contact { background:#fffdf8; color:var(--green); }
+.calm-primary:disabled { opacity:.5; cursor:not-allowed; }
+.calm-text { min-height:48px; background:transparent; border:0; padding:10px; display:flex; justify-content:center; align-items:center; gap:8px; color:#536d5e; font-size:15px; }
+.calm-progress { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:15px; font-weight:600; }
+.calm-dots { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+.calm-dots i { width:8px; height:8px; border-radius:50%; background:#d8ded3; }
+.calm-dots i.filled { background:#256249; }
+.calm-instruction { position:relative; padding-top:4px; }
+.calm-step-symbol { display:flex; color:#205c43; height:52px; align-items:center; margin-bottom:12px; }
+.calm-instruction h1 { font-size:30px; line-height:1.35; letter-spacing:-.5px; text-wrap:initial; overflow-wrap:anywhere; }
+.calm-instruction p { font-size:19px; line-height:1.5; margin-top:10px; color:#5d7169; }
+.calm-orientation { overflow:hidden; background:#ebeee3; border-radius:20px; position:relative; }
+.calm-app .calm-orientation .live-map { height:250px; border:0; border-radius:0; }
+.calm-map-caption { display:flex; align-items:center; justify-content:center; gap:6px; padding:9px; color:#416d82; font-size:12px; background:#f3f5ed; }
+.calm-app .location-guidance { gap:10px; }
+.calm-app .location-consent,.calm-app .location-status { background:transparent; padding:10px 0; border:0; border-top:1px solid #dde3d8; border-radius:0; }
+.calm-app .location-consent p,.calm-app .location-status p { font-size:14px; }
+.calm-app .location-guidance .primary { background:transparent; color:var(--green); border:1px solid #a6b7a7; font-size:17px; min-height:56px; padding:13px; justify-content:center; }
+.calm-app .location-guidance .arrival-hint { font-size:14px; color:#637467; }
+.calm-app .location-status strong { font-size:15px; }
+.calm-disclosure { font-size:15px; color:#526b5c; }
+.calm-disclosure summary { cursor:pointer; min-height:48px; padding:12px 0; }
+.calm-disclosure ol { padding-left:22px; line-height:1.7; }
+.calm-recovery { padding:20px; display:flex; gap:12px; border-radius:20px; background:#fff0e6; color:#93402e; }
+.calm-recovery>svg { flex-shrink:0; margin-top:4px; }
+.calm-recovery h1 { font-size:27px; line-height:1.35; letter-spacing:0; text-wrap:initial; }
+.calm-recovery p { font-size:17px; color:#684f42; line-height:1.6; margin-top:12px; }
+.calm-voice { padding:12px; border-radius:14px; font-size:16px; background:#fff0e6; color:#93402e; }
+.calm-save-note { font-size:12px; text-align:center; margin:18px 0 0; color:#778376; }
+.calm-local { font-size:12px; line-height:1.6; color:#6d796e; }
+.calm-status { display:flex; align-items:flex-start; gap:12px; background:#eaf1df; border-radius:18px; padding:18px; }
+.calm-status>svg { flex-shrink:0; margin-top:3px; }
+.calm-status h2 { font-size:22px; line-height:1.35; }
+.calm-status p { font-size:15px; line-height:1.5; margin-top:7px; color:#586e5a; }
+.calm-status.is-alert { background:#ffede5; color:#973e29; }
+.calm-caregiver>.live-map { height:280px; }
+.calm-caregiver .live-map { height:280px; }
+.calm-map-shell { position:relative; min-width:0; }
+.elder-map .maplibregl-canvas { filter:saturate(.7); }
+.calm-map-error { position:absolute; top:8px; left:8px; right:8px; padding:8px; text-align:center; background:#fff9e9; color:#76562a; border-radius:10px; font-size:12px; }
+.calm-trip-meta { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:8px 0; }
+.calm-trip-meta>div { display:flex; gap:8px; font-size:15px; }
+.calm-trip-meta svg { width:20px; }
+.calm-trip-meta strong { display:block; font-size:21px; margin-top:4px; }
+.calm-event { padding:12px; display:flex; align-items:center; gap:8px; background:#f0f1e7; border-radius:12px; font-size:13px; }
+.calm-demo-switch { max-width:516px; margin:12px auto; padding:0 22px; font-size:13px; color:#758173; }
+.calm-demo-switch summary { cursor:pointer; padding:14px 0; min-height:48px; }
+.calm-demo-switch .secondary { margin-top:8px; font-size:16px; }
+.calm-app .site-footer { max-width:560px; padding:12px 22px 24px; font-size:12px; }
+.calm-app .onboarding-card { background:#fffdf7; border-radius:24px; padding:24px; box-shadow:none; }
+.calm-app .onboarding-card h1 { font-size:29px; line-height:1.35; text-wrap:initial; }
+.calm-app .onboarding-card p { font-size:17px; }
+.calm-app .onboarding-choice { font-size:20px; min-height:64px; }
+.calm-app .standalone-card { padding:22px; }
+.calm-app .standalone-card h1 { font-size:30px; }
+.map-me-label { position:absolute; white-space:nowrap; background:#fff; color:#1762bd; border-radius:9px; font-size:13px; font-weight:700; padding:4px 8px; left:50%; top:23px; transform:translateX(-50%); box-shadow:0 2px 8px #1233; }
+.calm-route-fallback { height:250px; display:grid; place-items:center; background:#eaf0e3; }
+.calm-route-fallback svg { width:100%; height:200px; }
+.calm-route-fallback p { font-size:12px; padding:5px; text-align:center; }
+@media(min-width:700px) { .calm-app .main-shell { padding-top:32px; } .calm-home-art { height:155px; } }
+@media(max-width:350px) { .calm-app .main-shell { padding:20px 16px 10px; } .calm-app .site-header { padding:12px 16px; } .calm-app .brand { font-size:21px; } .calm-instruction h1 { font-size:27px; } .calm-primary,.calm-contact { font-size:21px; } .calm-appointment { padding:15px 10px; gap:8px; } .calm-recovery { padding:16px; gap:8px; } .calm-recovery h1 {font-size:24px;} }

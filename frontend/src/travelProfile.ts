@@ -5,6 +5,7 @@ export const savedPlaceSchema = z.object({
   name: z.string().trim().min(1).max(200),
 });
 export const travelProfileSchema = z.object({
+  travellerPhone: z.string().trim().refine(value => !value || /^\+?[\d ()-]{6,22}$/.test(value)).optional(),
   home: savedPlaceSchema,
   destinations: z.array(savedPlaceSchema).min(1).max(8),
   mobilityAid: z.enum(["none", "cane", "walker"]),

@@ -1,0 +1,24 @@
+import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+const plan = JSON.parse(readFileSync(new URL('../../docs/api-examples/plan.json', import.meta.url), 'utf8'));
+test('elder sees instruction and map before secondary controls', async ({ page }) => {
+  await page.route('**/api/journeys/plan', r => r.fulfill({ json: plan }));
+  await page.goto('/');
+  await page.getByRole('button', { name: '开始设置', exact: true }).click();
+  await page.getByRole('button', { name: /使用示例/ }).click();
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: '下一题', exact: true }).click();
+  await page.getByRole('button', { name: '为爸爸规划路线', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '陈伯，早上好' })).toBeVisible();
+  await page.getByRole('button', { name: '开始行程', exact: true }).click();
+  const instruction = page.getByTestId('elder-current-instruction');
+  const map = page.getByRole('region', { name: '当前步骤方向地图' });
+  await expect(instruction).toBeVisible();
+  await expect(map).toBeVisible();
+  const a = await instruction.boundingBox();
+  const b = await map.boundingBox();
+  expect(a!.y).toBeLessThan(b!.y);
+  await expect(page.getByRole('button', { name: '再说一次', exact: true })).toBeVisible();
+  expect(await page.locator('.mode-bar').count()).toBe(0);
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

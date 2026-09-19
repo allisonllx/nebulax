@@ -5,20 +5,15 @@ import {
   Check,
   CheckCheck,
   CalendarDays,
-  ChevronRight,
   CircleHelp,
   Clock3,
   CloudOff,
-  Download,
   Footprints,
   HeartHandshake,
   Hospital,
   Leaf,
   ArrowUpDown as Lift,
   BusFront,
-  MapPin,
-  Phone,
-  RefreshCw,
   Route,
   Settings2,
   ShieldCheck,
@@ -58,6 +53,8 @@ import type { Appointment, Family } from "./profile";
 import { defaultTravelProfile, travelProfileSchema } from "./travelProfile";
 import { LocationGuidance } from "./LocationGuidance";
 import "./App.css";
+import "./Calm.css";
+import { ElderHome, ElderGuidance, CaregiverDashboard } from "./CalmScreens";
 
 type View =
   | "journey"
@@ -135,6 +132,7 @@ function App() {
   const [replanBusy, setReplanBusy] = useState(false);
   // Shown once after an automatic off-route recovery, until he acknowledges or moves on.
   const [recovered, setRecovered] = useState(false);
+  const [previousJourney, setPreviousJourney] = useState<import("./journey").Journey>();
   useLayoutEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -367,6 +365,7 @@ function App() {
     const current = stateRef.current;
     const fix = locationStatusRef.current;
     if (!current || !fix || replanBusy) return;
+    setPreviousJourney(current.journey);
     setReplanBusy(true);
     try {
       const destination = current.journey.destination
@@ -404,7 +403,7 @@ function App() {
         phase: "active",
         blocked: false,
         proposal: null,
-        lostAlert: null,
+        lostAlert: current.lostAlert,
         lastDeviation: { at: new Date().toISOString(), near: nearLabel },
         progressUpdatedAt: new Date().toISOString(),
       });
@@ -696,7 +695,7 @@ function App() {
   const stepNumber = state ? state.stepIndex + 1 : 1;
 
   return (
-    <div className={`app ${large ? "large-text" : ""}`}>
+    <div className={`app calm-app ${personaMode} ${state?.phase ?? "setup"} ${large ? "large-text" : ""}`}>
       <a href="#main" className="skip-link">
         {t("Skip to journey", "跳至行程")}
       </a>
@@ -781,23 +780,6 @@ function App() {
       )}
       <main id="main" className="main-shell">
         {back}
-        {state?.phase === "active" && view === "journey" && (
-          <nav
-            className="journey-tools"
-            aria-label={t("Journey help", "行程帮助")}
-          >
-            <span>
-              {t(
-                `Step ${stepNumber} of ${state.journey.steps.length}`,
-                `第${stepNumber}步，共${state.journey.steps.length}步`,
-              )}
-            </span>
-            <button onClick={() => go("help")}>
-              <CircleHelp size={21} />
-              {t("Get help", "获取帮助")}
-            </button>
-          </nav>
-        )}
         {offline && (
           <div className="connection-banner" role="status">
             <CloudOff size={24} />
@@ -941,215 +923,9 @@ function App() {
                 </section>
               )}
             {personaMode === "caregiver" && view === "journey" ? (
-              <section className="caregiver-home">
-                <span className="eyebrow">{t("FAMILY VIEW", "家人视角")}</span>
-                <h1 ref={headingRef} tabIndex={-1}>
-                  {state.phase === "active"
-                    ? t("Dad is on his way.", "爸爸正在路上。")
-                    : state.phase === "arrived"
-                      ? t(
-                          `Dad has arrived safely at ${journey.destination?.name.en ?? "the hospital"}.`,
-                          `爸爸已安全到达${journey.destination?.name.zh ?? "医院"}。`,
-                        )
-                      : t("Dad has not left yet.", "爸爸还没出发。")}
-                </h1>
-                {state.lostAlert &&
-                  state.family.linked &&
-                  state.family.scopes.tripUpdates && (
-                    <div className="lost-alert" role="alert">
-                      <strong>
-                        {t(
-                          "Dad may have wandered off his route",
-                          "爸爸可能走失了",
-                        )}
-                      </strong>
-                      <p>
-                        {t(
-                          `He was about ${state.lostAlert.routeMetres} m away from the planned route` +
-                            (state.lostAlert.near
-                              ? `, near ${state.lostAlert.near}.`
-                              : ".") +
-                            " His position is marked on the map below. The app has replanned his guidance from where he is.",
-                          `他偏离规划路线约 ${state.lostAlert.routeMetres} 米` +
-                            (state.lostAlert.near
-                              ? `，位置在 ${state.lostAlert.near} 附近。`
-                              : "。") +
-                            "下方地图已标出他的位置，App 已从他所在的位置重新规划指引。",
-                        )}
-                      </p>
-                      <small>
-                        {t(
-                          `Last update ${time(state.lostAlert.at)}. If you cannot reach him, consider calling for help.`,
-                          `最后更新 ${time(state.lostAlert.at)}。若联系不上他，请考虑求助。`,
-                        )}
-                      </small>
-                      <button
-                        className="secondary"
-                        onClick={() => setState({ ...state, lostAlert: null })}
-                      >
-                        {t("I have checked on him — dismiss", "我已确认他的情况，解除警报")}
-                      </button>
-                    </div>
-                  )}
-                {state.family.linked && state.family.scopes.tripUpdates ? (
-                  <>
-                    <div className="caregiver-status card">
-                      {state.phase === "active" && step ? (
-                        <>
-                          <div className="caregiver-progress">
-                            <strong>
-                              {t(
-                                `Step ${stepNumber} of ${state.journey.steps.length}`,
-                                `第 ${stepNumber} 步，共 ${state.journey.steps.length} 步`,
-                              )}
-                            </strong>
-                            <div
-                              className="progress-track"
-                              role="progressbar"
-                              aria-valuemin={1}
-                              aria-valuemax={state.journey.steps.length}
-                              aria-valuenow={stepNumber}
-                            >
-                              <span
-                                style={{
-                                  width: `${Math.round((stepNumber / state.journey.steps.length) * 100)}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <p className="caregiver-step">
-                            {language === "en"
-                              ? step.instruction.en
-                              : step.instruction.zh}
-                          </p>
-                          <p className="caregiver-eta">
-                            {liveFix && Date.now() - liveFix.at < 30000
-                              ? liveFix.off
-                                ? t(
-                                    "Off the route — being replanned",
-                                    "偏离路线 · 正在自动调整",
-                                  )
-                                : t(
-                                    "Position normal · updated just now",
-                                    "位置正常 · 刚刚更新",
-                                  )
-                              : t(
-                                  "Location updates when his screen is open",
-                                  "他打开应用时会更新位置",
-                                )}
-                            {" · "}
-                            {t(
-                              `Est. arrival ${arrival(journey)}`,
-                              `预计 ${arrival(journey)} 到达`,
-                            )}
-                          </p>
-                        </>
-                      ) : state.phase === "planned" ? (
-                        <p className="caregiver-step">
-                          {t(
-                            `Route is ready. He should leave by ${time(journey.departureTime)} and arrive ${timeRange}.`,
-                            `路线已备好。最晚 ${time(journey.departureTime)} 出门，预计 ${timeRange} 到达。`,
-                          )}
-                        </p>
-                      ) : (
-                        <p className="caregiver-step">
-                          {t(
-                            `The journey to ${journey.destination?.name.en ?? "the hospital"} is complete.`,
-                            `前往${journey.destination?.name.zh ?? "医院"}的行程已完成。`,
-                          )}
-                        </p>
-                      )}
-                      <small className="caregiver-updated">
-                        {state.progressUpdatedAt
-                          ? t(
-                              `He confirmed this himself · last update ${time(state.progressUpdatedAt)}`,
-                              `由爸爸亲自确认 · 最后更新 ${time(state.progressUpdatedAt)}`,
-                            )
-                          : t(
-                              "Updates appear here once he starts.",
-                              "爸爸开始行程后，这里会显示进展。",
-                            )}
-                      </small>
-                    </div>
-                    {state.lastDeviation && !state.lostAlert && (
-                      <button
-                        className="deviation-note"
-                        onClick={() => setState({ ...state, lastDeviation: null })}
-                      >
-                        {t(
-                          `${time(state.lastDeviation.at)} · went off the route once — replanned automatically`,
-                          `${time(state.lastDeviation.at)} 曾偏离路线，已自动调整`,
-                        )}
-                        {state.lastDeviation.near
-                          ? t(
-                              ` (near ${state.lastDeviation.near})`,
-                              `（${state.lastDeviation.near} 附近）`,
-                            )
-                          : ""}
-                      </button>
-                    )}
-                    <LiveMap
-                      journey={journey}
-                      language={language}
-                      position={
-                        liveFix ??
-                        (state.lostAlert
-                          ? { lat: state.lostAlert.lat, lon: state.lostAlert.lon }
-                          : null)
-                      }
-                    />
-                  </>
-                ) : (
-                  <div className="caregiver-status card">
-                    <p className="caregiver-step">
-                      {t(
-                        "Mr Tan has not shared trip progress. He can turn it on under Family settings.",
-                        "陈伯暂未共享行程进展。他可以在“家属”页里随时开启。",
-                      )}
-                    </p>
-                  </div>
-                )}
-                <div className="caregiver-actions">
-                  <button
-                    className="secondary"
-                    onClick={() => go("appointment")}
-                  >
-                    <CalendarDays size={20} />
-                    {t("Manage appointment", "管理预约")}
-                  </button>
-                  <button className="secondary" onClick={() => go("family")}>
-                    <HeartHandshake size={20} />
-                    {t("Family settings", "家属设置")}
-                  </button>
-                  <button className="secondary" onClick={() => go("details")}>
-                    <Route size={20} />
-                    {t("Trip details", "查看行程详情")}
-                  </button>
-                </div>
-                {!isDemo && (
-                  <TripPlanner
-                    language={language}
-                    profile={profile}
-                    onPlanned={(chosen) => {
-                      setState({
-                        ...state,
-                        journey: chosen,
-                        stepIndex: 0,
-                        phase: "planned",
-                        blocked: false,
-                        proposal: null,
-                        progressUpdatedAt: null,
-                      });
-                      setNotice(
-                        t(
-                          "New journey saved for Mr Tan.",
-                          "新行程已保存，爸爸那边已更新。",
-                        ),
-                      );
-                    }}
-                  />
-                )}
-              </section>
+              <CaregiverDashboard snapshot={state} language={language} position={liveFix}
+                onDismiss={() => setState({ ...state, lostAlert: null })}
+                onDetails={() => go("details")} onFamily={() => go("profile")} />
             ) : view === "family" ? (
               <FamilyPanel
                 snapshot={state}
@@ -1160,6 +936,7 @@ function App() {
                 speaking={speech.speaking}
               />
             ) : view === "appointment" ? (
+              <>
               <AppointmentPanel
                 snapshot={state}
                 language={language}
@@ -1175,6 +952,9 @@ function App() {
                   })
                 }
               />
+              {!isDemo && state.phase !== "active" && <TripPlanner language={language} profile={profile}
+                onPlanned={(chosen) => setState({ ...state, journey: chosen, stepIndex: 0, phase: "planned", blocked: false, proposal: null, progressUpdatedAt: null })} />}
+              </>
             ) : view === "profile" ? (
               <Onboarding
                 editing
@@ -1451,6 +1231,7 @@ function App() {
                 </div>
                 <div className="journey-grid">
                   <section className="card">
+                    <p className="calm-trip-timing">{t("Leave", "出发")} {time(journey.departureTime)} · {t("Estimated arrival", "预计到达")} <strong>{timeRange}</strong></p>
                     <div className="section-heading">
                       <h2>{t("Your steps", "行程步骤")}</h2>
                       <span className="pill">
@@ -1474,6 +1255,7 @@ function App() {
                               </span>
                               <h3>{item.instruction[language]}</h3>
                               <p>{item.detail[language]}</p>
+                              {item.directions.map((direction, i) => <p key={i}>{direction[language]}</p>)}
                             </div>
                           </li>
                         );
@@ -1491,6 +1273,11 @@ function App() {
                   </section>
                   <LiveMap journey={journey} language={language} />
                 </div>
+                <details className="calm-disclosure"><summary>{t("Travel conditions", "路线状况")}</summary>
+                  {journey.alerts.map(alert => <p key={alert.id}>{alert.message[language]}</p>)}
+                  <p>{t("Last checked", "最后检查")} {time(journey.updatedAt)}</p>
+                  <button className="secondary" disabled={offline || busy} onClick={() => refresh()}>{t("Check for updates", "检查更新")}</button>
+                </details>
               </>
             ) : state.phase === "arrived" ? (
               <section className="standalone-card arrival-card">
@@ -1533,43 +1320,6 @@ function App() {
               </section>
             ) : (
               <>
-                <div
-                  className={`page-heading greeting ${state.phase === "active" ? "active-heading" : ""}`}
-                >
-                  <div>
-                    <span className="eyebrow">
-                      {state.phase === "active"
-                        ? t("ONE STEP AT A TIME", "一步一步，安心前行")
-                        : t("YOUR NEXT JOURNEY", "您的下一段行程")}
-                    </span>
-                    <h1 ref={headingRef} tabIndex={-1}>
-                      {state.phase === "active" ? (
-                        t("On your way, Mr Tan.", "陈先生，安心前行。")
-                      ) : (
-                        <>
-                          {t("Good morning,", "早上好，")}
-                          <br />
-                          {t("Mr Tan.", "陈先生。")}
-                        </>
-                      )}
-                    </h1>
-                    <p>
-                      {state.phase === "active"
-                        ? t(
-                            "There’s no rush. Follow the instruction below.",
-                            "不用着急。请按照下方指引前行。",
-                          )
-                        : t(
-                            "A familiar journey. A little more peace of mind.",
-                            "熟悉的旅程，多一份安心。",
-                          )}
-                    </p>
-                  </div>
-                  <span className="greeting-art" aria-hidden="true">
-                    <Leaf size={52} strokeWidth={1.3} />
-                    <span className="art-line" />
-                  </span>
-                </div>
                 {state.blocked && (
                   <section className="alert-card" role="alert">
                     <TriangleAlert size={28} />
@@ -1609,401 +1359,27 @@ function App() {
                     </div>
                   </section>
                 )}
-                <div className="journey-grid">
-                  <div className="journey-column">
-                    {state.phase === "planned" ? (
-                      <section className="card trip-card">
-                        <div className="destination">
-                          <span className="destination-icon">
-                            <Hospital size={29} />
-                          </span>
-                          <div>
-                            <span className="eyebrow">
-                              {!journey.destination ||
-                              journey.destination.name.en
-                                .toLowerCase()
-                                .includes("hospital")
-                                ? t("HOSPITAL APPOINTMENT", "医院预约")
-                                : t("YOUR TRIP", "您的行程")}
-                            </span>
-                            <h2>
-                              {journey.destination
-                                ? journey.destination.name[language]
-                                : t("Tan Tock Seng Hospital", "陈笃生医院")}
-                            </h2>
-                            <p>
-                              {t(
-                                appointmentLabel(state.appointment, "en"),
-                                appointmentLabel(state.appointment, "zh"),
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        {state.appointment.note && (
-                          <p className="appointment-note">
-                            <CalendarDays size={18} />
-                            {state.appointment.note}
-                          </p>
-                        )}
-                        <div className="departure-panel">
-                          <div>
-                            <span>{t("Leave home at", "出发时间")}</span>
-                            <strong>{time(journey.departureTime)}</strong>
-                          </div>
-                          <span className="departure-arrow">
-                            <ArrowRight size={26} />
-                          </span>
-                          <div>
-                            <span>{t("Estimated arrival", "预计到达")}</span>
-                            <strong className="arrival-time">
-                              {timeRange}
-                            </strong>
-                            <small>
-                              {t(
-                                `Appointment at ${time(appointmentInstant(state.appointment))}`,
-                                `预约时间：${time(appointmentInstant(state.appointment))}`,
-                              )}
-                            </small>
-                          </div>
-                        </div>
-                        {state.family.linked && (
-                          <p className="prepared-byline">
-                            {t(
-                              "Mei Ling has prepared this route for you.",
-                              "美玲已经为您准备好路线。",
-                            )}
-                          </p>
-                        )}
-                        <button
-                          className="primary"
-                          disabled={
-                            busy || state.blocked || Boolean(state.proposal)
-                          }
-                          onClick={advance}
-                        >
-                          {t("Start journey", "开始行程")}
-                          <ArrowRight size={25} />
-                        </button>
-                        {state.family.phone ? (
-                          <a
-                            className="secondary call-family"
-                            href={`tel:${dialNumber(state.family.phone)}`}
-                          >
-                            <Phone size={22} />
-                            {t("Call Mei Ling", "联系女儿")}
-                          </a>
-                        ) : (
-                          <button
-                            className="secondary call-family"
-                            onClick={() => go("help")}
-                          >
-                            <Phone size={22} />
-                            {t("Call Mei Ling", "联系女儿")}
-                          </button>
-                        )}
-                        <button
-                          className="text-button"
-                          onClick={() => go("details")}
-                        >
-                          {t("See the full route", "查看完整路线")}
-                          <ChevronRight size={20} />
-                        </button>
-                      </section>
-                    ) : (
-                      <section className="card guidance-card">
-                        {recovered && (
-                          <div className="recovered-banner" role="status">
-                            <span>
-                              {t(
-                                "New route found. We are guiding you from where you are.",
-                                "已找到新路线，正在从您所在的位置为您指引。",
-                              )}
-                            </span>
-                            <button
-                              className="primary"
-                              onClick={() => setRecovered(false)}
-                            >
-                              {t("Continue on the new route", "按新路线继续")}
-                              <ArrowRight size={22} />
-                            </button>
-                          </div>
-                        )}
-                        {step && step.mode === "train" && (
-                          <div className="tunnel-banner">
-                            <Download size={22} />
-                            <span>
-                              {t(
-                                "No signal underground ahead — your instructions are already saved on this phone.",
-                                "前方地下路段没有信号——指引已提前保存在这部手机上，请放心。",
-                              )}
-                            </span>
-                          </div>
-                        )}
-                        <div className="section-heading">
-                          <span className="eyebrow">
-                            {t(
-                              `STEP ${stepNumber} OF ${journey.steps.length}`,
-                              `第${stepNumber}步，共${journey.steps.length}步`,
-                            )}
-                          </span>
-                          <span className="pill">
-                            <Clock3 size={16} />
-                            {timeRange}
-                          </span>
-                        </div>
-                        <div
-                          className="progress-track"
-                          aria-label={t(
-                            `Step ${stepNumber} of ${journey.steps.length}`,
-                            `第${stepNumber}步，共${journey.steps.length}步`,
-                          )}
-                        >
-                          {journey.steps.map((item, i) => (
-                            <span
-                              key={item.id}
-                              className={
-                                i < state.stepIndex
-                                  ? "done"
-                                  : i === state.stepIndex
-                                    ? "current"
-                                    : "upcoming"
-                              }
-                            />
-                          ))}
-                        </div>
-                        <span className="instruction-icon">
-                          {(() => {
-                            const Icon = stepIcons[step.mode];
-                            return <Icon size={36} />;
-                          })()}
-                        </span>
-                        <h2 className="instruction-title">
-                          {step.instruction[language]}
-                        </h2>
-                        {!step.instruction[language].includes(
-                          step.place[language],
-                        ) && (
-                          <p className="step-place">
-                            <MapPin size={18} />
-                            {step.place[language]}
-                          </p>
-                        )}
-                        {step.directions.length > 0 && (
-                          <ol className="direction-list">
-                            {step.directions.map((direction, index) => (
-                              <li key={index}>{direction[language]}</li>
-                            ))}
-                          </ol>
-                        )}
-                        {step.mode === "walk" &&
-                          liveFix &&
-                          !liveFix.off &&
-                          Date.now() - liveFix.at < 20000 && (
-                            <p className="live-remaining">
-                              {t(
-                                `About ${liveFix.endMetres} m to go`,
-                                `大约还有 ${liveFix.endMetres} 米`,
-                              )}
-                            </p>
-                          )}
-                        {step.mode === "walk" && step.distanceMetres != null ? (
-                          <p className="instruction-detail">
-                            {t(
-                              `About ${step.distanceMetres} m in total.`,
-                              `全程大约 ${step.distanceMetres} 米。`,
-                            )}
-                          </p>
-                        ) : (
-                          <p className="instruction-detail">
-                            {step.detail[language]}
-                          </p>
-                        )}
-                        {state.stepIndex < journey.steps.length - 1 ? (
-                          <p className="next-preview">
-                            {t("After this: ", "接下来：")}
-                            {
-                              journey.steps[state.stepIndex + 1].instruction[
-                                language
-                              ]
-                            }
-                          </p>
-                        ) : (
-                          <p className="next-preview">
-                            {t("This is the last step.", "这是最后一步。")}
-                          </p>
-                        )}
-                        {listen(
-                          [
-                            step.instruction[language],
-                            ...step.directions.map(
-                              (direction) => direction[language],
-                            ),
-                          ].join(" "),
-                        )}
-                        <LocationGuidance
-                          key={`${journey.id}-${journey.version}-${step.id}`}
-                          journey={journey}
-                          stepIndex={state.stepIndex}
-                          enabled={locationEnabled}
-                          onEnable={setLocationEnabled}
-                          language={language}
-                          disabled={
-                            busy || state.blocked || Boolean(state.proposal)
-                          }
-                          onAdvance={advance}
-                          onHelp={() => go("help")}
-                          voice={true}
-                          nearLabel={nearLabel}
-                          replanBusy={replanBusy}
-                          onStatus={handleLiveFix}
-                        />
-                        {state.family.phone ? (
-                          <a
-                            className="secondary call-family"
-                            href={`tel:${dialNumber(state.family.phone)}`}
-                          >
-                            <Phone size={22} />
-                            {t("Call Mei Ling", "联系女儿")}
-                          </a>
-                        ) : (
-                          <button
-                            className="secondary call-family"
-                            onClick={() => go("help")}
-                          >
-                            <Phone size={22} />
-                            {t("Call Mei Ling", "联系女儿")}
-                          </button>
-                        )}
-                        {state.stepIndex > 0 && (
-                          <button
-                            className="text-button"
-                            onClick={() =>
-                              setState({
-                                ...state,
-                                stepIndex: state.stepIndex - 1,
-                              })
-                            }
-                          >
-                            <ArrowLeft size={20} />
-                            {t("Previous instruction", "上一条指引")}
-                          </button>
-                        )}
-                        <button
-                          className="text-button"
-                          onClick={() => go("details")}
-                        >
-                          {t("See the full route", "查看完整路线")}
-                          <ChevronRight size={20} />
-                        </button>
-                      </section>
-                    )}
-                    <div className="saved-card">
-                      <span className="saved-icon">
-                        {saved ? (
-                          <Download size={23} />
-                        ) : (
-                          <TriangleAlert size={23} />
-                        )}
-                      </span>
-                      <div>
-                        <strong>
-                          {saved && shellReady
-                            ? t("Saved for offline use", "已保存，可离线查看")
-                            : saved
-                              ? t(
-                                  "Instructions saved on this phone",
-                                  "指引已保存在此手机上",
-                                )
-                              : t("Journey could not be saved", "无法保存行程")}
-                        </strong>
-                        <p>
-                          {saved && shellReady
-                            ? t(
-                                "Your route and instructions stay with you, even without a connection.",
-                                "即使没有网络，也能查看路线和指引。",
-                              )
-                            : saved
-                              ? t(
-                                  "Full offline reopening is available after the app finishes downloading.",
-                                  "应用下载完成后，即可离线重新打开。",
-                                )
-                              : t(
-                                  "Keep this screen open. Storage may be unavailable.",
-                                  "请保持此页面打开。手机存储可能不可用。",
-                                )}
-                        </p>
-                      </div>
-                      {saved && <Check size={22} />}
-                    </div>
-                  </div>
-                  <aside className="journey-aside">
-                    <LiveMap
-                      journey={journey}
-                      language={language}
-                      currentLegId={
-                        state.phase === "active" ? step?.legId : undefined
-                      }
-                      position={
-                        state.phase === "active" && liveFix ? liveFix : null
-                      }
-                    />
-                    <div className="conditions-card">
-                      <div>
-                        <span className="status-dot" />
-                        <strong>
-                          {isDemo
-                            ? t("Sample travel conditions", "示例路况")
-                            : t("Live travel conditions", "实时路况")}
-                        </strong>
-                      </div>
-                      {journey.alerts.length === 0 ? (
-                        <p>
-                          {t(
-                            "Checked: no train disruption on this route, no lift maintenance reported at his stations, no rain expected on the walks.",
-                            "已核查：本路线无列车故障通告，上下车车站无电梯维修记录，步行沿途暂无降雨。",
-                          )}
-                        </p>
-                      ) : (
-                        <ul className="conditions-alerts">
-                          {journey.alerts.map((alert) => (
-                            <li key={alert.id}>{alert.message[language]}</li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="conditions-bottom">
-                        <span>
-                          {t("Last update", "最后更新")}{" "}
-                          {time(journey.updatedAt)}
-                        </span>
-                        <button
-                          aria-label={t("Check for updates", "检查更新")}
-                          disabled={offline || busy}
-                          onClick={() => refresh()}
-                        >
-                          <RefreshCw size={17} />
-                          {busy
-                            ? t("Checking…", "检查中…")
-                            : t("Check", "检查")}
-                        </button>
-                      </div>
-                    </div>
-                  </aside>
-                </div>
-                <div className="help-strip">
-                  <div>
-                    <HeartHandshake size={28} />
-                    <span>
-                      {t(
-                        "A little help is always okay.",
-                        "需要帮忙，随时开口。",
-                      )}
-                    </span>
-                  </div>
-                  <button onClick={() => go("help")}>
-                    {t("Get help", "获取帮助")}
-                    <ArrowRight size={21} />
-                  </button>
-                </div>
+                {state.phase === "planned" ? (
+                  <ElderHome journey={journey} language={language} linked={state.family.linked}
+                    phone={state.family.phone} disabled={busy || state.blocked || Boolean(state.proposal)}
+                    onStart={advance} onDetails={() => go("details")} onHelp={() => go("help")} />
+                ) : (
+                  <ElderGuidance journey={journey} language={language} index={state.stepIndex}
+                    position={liveFix && Date.now()-liveFix.at < 20000 ? liveFix : null}
+                    remaining={liveFix && Date.now()-liveFix.at < 20000 && !liveFix.off ? liveFix.endMetres : undefined}
+                    off={Boolean(liveFix?.off)} recovering={replanBusy} recovered={recovered} previous={previousJourney}
+                    onContinue={() => { setRecovered(false); setPreviousJourney(undefined); }}
+                    onRepeat={() => speech.speak(liveFix?.off ? t("Stop somewhere safe. Contact your family if you need help.", "请在安全的地方停下，需要帮助时请联系女儿。") : [step.instruction[language], ...step.directions.map(d => d[language])].join(" "))}
+                    onHelp={() => go("help")} phone={state.family.phone} onDetails={() => go("details")}
+                    controls={<LocationGuidance key={`${journey.id}-${journey.version}-${step.id}`}
+                      journey={journey} stepIndex={state.stepIndex} enabled={locationEnabled}
+                      onEnable={setLocationEnabled} language={language}
+                      disabled={busy || state.blocked || Boolean(state.proposal) || replanBusy || recovered}
+                      onAdvance={advance} onHelp={() => go("help")} voice={true}
+                      nearLabel={nearLabel} replanBusy={replanBusy} onStatus={handleLiveFix} compact />}
+                  />
+                )}
+                <p className="calm-save-note">{saved && shellReady ? t("Saved for offline use", "已保存，可离线查看") : saved ? t("Instructions saved on this phone", "指引已保存在此手机上") : t("Journey could not be saved", "无法保存行程")}</p>
               </>
             )}
           </>
@@ -2067,32 +1443,12 @@ function App() {
         )}
       </main>
       {state && (
-        <div
-          className="mode-bar"
-          role="group"
-          aria-label={t("Who is using the app", "使用者模式")}
-        >
-          <button
-            aria-pressed={personaMode === "elder"}
-            onClick={() => {
-              setPersonaMode("elder");
-              go("journey");
-            }}
-          >
-            <Route size={22} />
-            {t("Mr Tan's view", "长辈模式")}
-          </button>
-          <button
-            aria-pressed={personaMode === "caregiver"}
-            onClick={() => {
-              setPersonaMode("caregiver");
-              go("journey");
-            }}
-          >
-            <HeartHandshake size={22} />
-            {t("Family view", "家人模式")}
-          </button>
-        </div>
+        <details className="calm-demo-switch">
+          <summary>{t("Demo views", "演示视角")}</summary>
+          <p>{t("Same-browser preview only. No remote sharing.", "仅预览此浏览器中的两个视角，未连接其他手机。")}</p>
+          <button className="secondary" onClick={() => {setPersonaMode("elder"); go("journey");}}>{t("Mr Tan's view", "长辈模式")}</button>
+          <button className="secondary" onClick={() => {setPersonaMode("caregiver"); go("journey");}}>{t("Family view", "家人模式")}</button>
+        </details>
       )}
       <footer className="site-footer">
         <span>

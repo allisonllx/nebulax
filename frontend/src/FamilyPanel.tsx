@@ -132,8 +132,8 @@ export function FamilyPanel({
             <strong>{t("Share trip updates", "分享行程进度")}</strong>
             <small>
               {t(
-                "Appointment, current step and confirmed arrival. No live location.",
-                "预约、当前步骤及已确认的到达状态。不含实时位置。",
+                "Progress, available location and deviation records in this browser. No remote notifications.",
+                "在本机查看行程进度、可用位置和偏航记录。不发送远程通知。",
               )}
             </small>
           </span>

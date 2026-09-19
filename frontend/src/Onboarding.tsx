@@ -58,7 +58,8 @@ export function Onboarding({
   const [walkMinutes, setWalkMinutes] = useState(initialWalkMinutes);
   const [repeatSeconds, setRepeatSeconds] = useState(initial?.repeatSeconds ?? 30);
   const [share, setShare] = useState(initial?.shareWithFamily ?? true);
-  const [familyPhone, setFamilyPhone] = useState("");
+  const [familyPhone, setFamilyPhone] = useState(initial?.familyPhone ?? "");
+  const [travellerPhone, setTravellerPhone] = useState(initial?.travellerPhone ?? "");
 
   const [home, setHome] = useState<PlacePin | null>(initial?.home ?? null);
   const [destinations, setDestinations] = useState<(PlacePin | null)[]>(
@@ -66,6 +67,7 @@ export function Onboarding({
   );
   const validPlaces =
     home !== null && destinations.length > 0 && destinations.every(Boolean);
+  const validPhones = [familyPhone, travellerPhone].every(value => !value.trim() || /^\+?[\d ()-]{6,22}$/.test(value.trim()));
 
   const choice = (
     active: boolean,
@@ -329,8 +331,8 @@ export function Onboarding({
         () => setShare(true),
         t("Yes, she may", "可以"),
         t(
-          "She sees which step you are on — never your exact location.",
-          "她只看到您走到第几步，不是精确位置。",
+          "This device’s family preview shows progress, location and deviation records. No remote notification is sent.",
+          "本机家人视角可查看行程、位置和偏航记录。当前不会发送远程通知。",
         ),
       )}
       {choice(
@@ -359,13 +361,17 @@ export function Onboarding({
           />
         </div>
       </label>
+      <label className="onboarding-field"><span>{t("Dad’s phone number (optional)", "爸爸的手机号码（可选）")}</span>
+        <div className="onboarding-number"><input type="tel" value={travellerPhone} onChange={event => setTravellerPhone(event.target.value)} /></div>
+      </label>
       <button
         className="primary"
-        disabled={busy || (!editing && offline) || !validPlaces}
+        disabled={busy || (!editing && offline) || !validPlaces || !validPhones}
         onClick={() =>
           home &&
           validPlaces &&
           onComplete({
+            travellerPhone,
             home,
             destinations: destinations as PlacePin[],
             mobilityAid,

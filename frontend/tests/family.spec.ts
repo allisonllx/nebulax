@@ -1,4 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
+import { seed, mode } from "./setup";
+test.beforeEach(async ({page}) => { await seed(page, "caregiver"); });
+async function appointment(page: Page) { await mode(page,"caregiver"); await page.getByRole("button", {name:"Appointment",exact:true}).click(); }
+async function details(page: Page) { await mode(page,"elder"); await page.getByRole("button",{name:"See the full route",exact:true}).click(); }
 
 async function linkFamily(page: Page, updates = true, prepare = true) {
   await page.getByRole("button", { name: "Family", exact: true }).click();
@@ -21,17 +25,19 @@ test("appointment edits update route timing and survive reload", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Appointment", exact: true }).click();
+  await appointment(page);
   await page.getByLabel("Appointment date", { exact: true }).fill("2026-10-05");
   await page.getByLabel("Appointment time", { exact: true }).fill("11:30");
   await page
     .getByRole("button", { name: "Save appointment and plan", exact: true })
     .click();
+  await details(page);
   await expect(page.getByText("11:05–11:15", { exact: true })).toBeVisible();
-  await expect(page.getByText("10:15", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(/Leave 10:15/)).toBeVisible();
   await page.reload();
+  await details(page);
   await expect(page.getByText("11:05–11:15", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Appointment", exact: true }).click();
+  await appointment(page);
   await expect(
     page.getByLabel("Appointment date", { exact: true }),
   ).toHaveValue("2026-10-05");
@@ -55,16 +61,20 @@ test("caregiver suggestion needs traveller acceptance before changing the appoin
   await expect(
     page.getByText("Waiting for Mr Tan to review", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My journey", exact: true }).click();
+  await mode(page, "elder");
+  await details(page);
   await expect(page.getByText("9:35–9:45", { exact: true })).toBeVisible();
+  await mode(page,"elder");
   await page
     .getByRole("button", { name: "Review suggestion", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Accept and update plan", exact: true })
     .click();
+  await details(page);
   await expect(page.getByText("11:05–11:15", { exact: true })).toBeVisible();
   await page.reload();
+  await details(page);
   await expect(page.getByText("11:05–11:15", { exact: true })).toBeVisible();
 });
 
@@ -153,20 +163,21 @@ test("active journey cannot be replaced by appointment editing", async ({
   page,
 }) => {
   await page.goto("/");
+  await mode(page, "elder");
   await page
     .getByRole("button", { name: "Start journey", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "I'm at the station", exact: true })
+    .getByRole("button", { name: "I’m here — show next step", exact: true })
     .click();
-  await page.getByRole("button", { name: "Appointment", exact: true }).click();
+  await appointment(page);
   await expect(
     page.getByRole("button", {
       name: "Save appointment and plan",
       exact: true,
     }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "My journey", exact: true }).click();
+  await mode(page, "elder");
   await expect(
     page.getByRole("heading", { name: "Take the lift to the platform" }),
   ).toBeVisible();
@@ -176,29 +187,31 @@ test("the next fortnightly visit is created only after an explicit action", asyn
   page,
 }) => {
   await page.goto("/");
+  await mode(page, "elder");
   await page
     .getByRole("button", { name: "Start journey", exact: true })
     .click();
   for (const name of [
-    "I'm at the station",
-    "I'm on the platform",
-    "I've reached Novena",
-    "I'm at the concourse",
-    "I have arrived",
+    "I’m here — show next step",
+    "I’m here — show next step",
+    "I’m here — show next step",
+    "I’m here — show next step",
+    "I’m here — finish journey",
   ]) {
     await page.getByRole("button", { name, exact: true }).click();
   }
-  await page.getByRole("button", { name: "Appointment", exact: true }).click();
+  await appointment(page);
   await expect(
     page.getByLabel("Appointment date", { exact: true }),
   ).toHaveValue("2026-09-21");
   await page
     .getByRole("button", { name: "Prepare next visit", exact: true })
     .click();
+  await mode(page,"elder");
   await expect(
     page.getByRole("button", { name: "Start journey", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Appointment", exact: true }).click();
+  await appointment(page);
   await expect(
     page.getByLabel("Appointment date", { exact: true }),
   ).toHaveValue("2026-10-05");

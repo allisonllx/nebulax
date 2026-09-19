@@ -42,6 +42,7 @@ export function LocationGuidance({
   onStatus,
   nearLabel,
   replanBusy,
+  compact = false,
 }: {
   journey: Journey;
   stepIndex: number;
@@ -65,6 +66,7 @@ export function LocationGuidance({
   nearLabel?: string | null;
   /** True while the app is automatically replanning from his position. */
   replanBusy?: boolean;
+  compact?: boolean;
 }) {
   const t = (en: string, zh: string) => (language === "en" ? en : zh);
   const step = journey.steps[stepIndex];
@@ -204,7 +206,7 @@ export function LocationGuidance({
           },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endMetres, routeMetres, off, coarseLat, coarseLon]);
+  }, [endMetres, routeMetres, off, coarseLat, coarseLon, now]);
   useEffect(() => {
     return () => onStatus?.(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -356,8 +358,8 @@ export function LocationGuidance({
         <div className="location-consent">
           <p>
             {t(
-              "Use your location to check walking progress while this app is open. Your position is not shared with family or saved.",
-              "打开应用时，可使用定位检查步行进度。位置不会分享给家人，也不会被保存。",
+              "Location checks work while this screen is open. With sharing enabled, this device’s family preview can show your position and deviation alerts. No remote notification is sent.",
+              "保持页面打开即可定位。允许共享后，本机家人视角可查看位置和偏航记录；不会发送远程通知。",
             )}
           </p>
           <button className="secondary" onClick={resetLocation}>
@@ -395,7 +397,7 @@ export function LocationGuidance({
           </div>
         </div>
       )}
-      {off && (
+      {off && !compact && (
         <div className="offroute-card" role="alert">
           <strong className="offroute-title">
             {t(
@@ -405,8 +407,8 @@ export function LocationGuidance({
           </strong>
           <p className="offroute-calm">
             {t(
-              "You are safe. We are finding a new route for you.",
-              "您现在很安全，我们正在找新的路线。",
+              "Please stop somewhere safe while we check the route.",
+              "请先在安全的地方停下，我们会帮助您确认路线。",
             )}
           </p>
           <p className="offroute-where">
@@ -455,7 +457,7 @@ export function LocationGuidance({
       </p>
       <button
         className={`primary${near ? " arrival-ready" : ""}`}
-        disabled={disabled}
+        disabled={disabled || off}
         onClick={() => {
           if (far) setConfirm(true);
           else onAdvance();

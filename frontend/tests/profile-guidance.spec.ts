@@ -9,6 +9,7 @@ const plan = JSON.parse(
 plan.steps[0].legId = "walk-1";
 plan.routeGeometry.features[0].properties.legId = "walk-1";
 async function setup(page: Page) {
+  await page.route("**/api/revgeocode?**", r => r.fulfill({json:{name:null}}));
   await page.route("**/api/journeys/plan", (r) => r.fulfill({ json: plan }));
   await page.route("**/api/geocode?**", (r) =>
     r.fulfill({
@@ -263,7 +264,7 @@ test("off-route alert requires sustained readings and clears when back on route"
     page.getByText("Let’s check your walking route", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Help me find my way", exact: true }),
+    page.getByRole("button", { name: "Call Mei Ling", exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: "test-results/location-guidance.png",
@@ -295,6 +296,24 @@ test("denied permission keeps manual progression available", async ({
       exact: true,
     }),
   ).toBeVisible();
+});
+
+test("sustained deviation replans and retains the family alert until acknowledged", async ({ page }) => {
+  await page.clock.install();
+  await fakeGps(page);
+  await fix(page, 1.4, 103.9, 8, 10000);
+  await fix(page, 1.4, 103.9, 8, 5000);
+  await fix(page, 1.4, 103.9, 8, 0);
+  await expect(page.getByRole('heading', { name: 'The route has changed — please stop for a moment' })).toBeVisible();
+  await expect(page.getByTestId('elder-current-instruction')).toHaveCount(0);
+  for (let i=0;i<4;i++) { await page.clock.fastForward(5000); await fix(page, 1.4, 103.9); }
+  await expect(page.getByRole('button', {name:'Continue on the new route',exact:true})).toBeVisible();
+  await page.getByRole('button', {name:'Continue on the new route',exact:true}).click();
+  await page.locator('.calm-demo-switch summary').click();
+  await page.getByRole('button', {name:'Family view',exact:true}).click();
+  await expect(page.getByRole('heading', {name:'Dad is off the planned route'})).toBeVisible();
+  await page.getByRole('button', {name:'I have checked on him',exact:true}).click();
+  await expect(page.getByRole('heading', {name:'Dad is off the planned route'})).toHaveCount(0);
 });
 test("unconfirmed addresses cannot continue and multiple saved places survive editing", async ({
   page,

@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
-  testMatch: "profile-guidance.spec.ts",
+  testMatch: ["profile-guidance.spec.ts", "calm-ui.spec.ts"],
   fullyParallel: true,
   use: {
     baseURL: "http://127.0.0.1:4180",
