@@ -31,6 +31,28 @@ def _street(name: str) -> Text:
     return Text(en=name.title(), zh=name.title())
 
 
+def bearing_to_compass(start: list[float], end: list[float]) -> Text | None:
+    """Initial compass direction from one [lon, lat] to another, for the geometry fallback."""
+    import math
+    d_lon, d_lat = end[0] - start[0], end[1] - start[1]
+    if abs(d_lon) < 1e-6 and abs(d_lat) < 1e-6:
+        return None
+    angle = (math.degrees(math.atan2(d_lon, d_lat)) + 360) % 360
+    names = ["NORTH", "NORTHEAST", "EAST", "SOUTHEAST", "SOUTH", "SOUTHWEST", "WEST", "NORTHWEST"]
+    return _COMPASS[names[round(angle / 45) % 8]]
+
+
+def walk_fallback_direction(coords: list[list[float]], metres: int) -> list[Text]:
+    """When the provider gives no street-level steps, derive one honest sentence from geometry."""
+    if len(coords) < 2:
+        return []
+    compass = bearing_to_compass(coords[0], coords[min(len(coords) - 1, 3)])
+    if compass is None:
+        return []
+    return [Text(en=f"Set off towards the {compass.en} and follow the path for about {metres} m.",
+                 zh=f"朝{compass.zh}出发,沿步行道走大约 {metres} 米。")]
+
+
 def walk_directions(raw_steps: list[dict]) -> list[Text]:
     """OneMap's street-level walking steps -> spoken-ready sentences. Compass words pair with the
     north-up map; we never invent landmarks the data does not contain."""

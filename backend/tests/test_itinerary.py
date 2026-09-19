@@ -116,3 +116,17 @@ def test_station_suffix_is_not_duplicated_for_english_station_names():
 
     assert text.zh.count("地铁站") + text.zh.lower().count("mrt station") == 1
     assert "Station MRT station" not in text.en
+
+
+def test_a_walk_leg_without_provider_steps_still_gets_a_direction(mrt_itinerary):
+    import copy
+    stripped = copy.deepcopy(mrt_itinerary)
+    for leg in stripped["legs"]:
+        leg.pop("steps", None)
+
+    plan = convert(stripped, pace_factor=0.6)
+
+    for step in plan.steps:
+        if step.mode == "walk":
+            assert step.directions, "geometry fallback must produce a departure direction"
+            assert "米" in step.directions[0].zh

@@ -1278,12 +1278,26 @@ function App() {
                         </div>
                         <div className="preference-row">
                           <span>
-                            <Lift size={20} />
-                            {t("No stairs", "无需爬楼梯")}
+                            <Footprints size={20} />
+                            {journey.walkDistanceMetres != null
+                              ? t(
+                                  `${journey.walkDistanceMetres} m walking, at your pace`,
+                                  `步行共 ${journey.walkDistanceMetres} 米，按您的步速`,
+                                )
+                              : t("Timed at your pace", "按您的步速")}
                           </span>
                           <span>
-                            <Footprints size={20} />
-                            {t("Your walking pace", "按您的步速")}
+                            <Route size={20} />
+                            {journey.transfers === 0
+                              ? t("No transfer", "不用换车")
+                              : t(
+                                  `${journey.transfers ?? "?"} transfer`,
+                                  `换乘 ${journey.transfers ?? "?"} 次`,
+                                )}
+                          </span>
+                          <span>
+                            <Lift size={20} />
+                            {t("No stairs", "无需爬楼梯")}
                           </span>
                         </div>
                         <button
@@ -1415,10 +1429,14 @@ function App() {
                         <h2 className="instruction-title">
                           {step.instruction[language]}
                         </h2>
-                        <p className="step-place">
-                          <MapPin size={18} />
-                          {step.place[language]}
-                        </p>
+                        {!step.instruction[language].includes(
+                          step.place[language],
+                        ) && (
+                          <p className="step-place">
+                            <MapPin size={18} />
+                            {step.place[language]}
+                          </p>
+                        )}
                         {step.directions.length > 0 && (
                           <ol className="direction-list">
                             {step.directions.map((direction, index) => (
@@ -1426,9 +1444,28 @@ function App() {
                             ))}
                           </ol>
                         )}
-                        <p className="instruction-detail">
-                          {step.detail[language]}
-                        </p>
+                        {step.mode === "walk" && step.distanceMetres != null ? (
+                          <p className="instruction-detail">
+                            {t(
+                              `About ${step.distanceMetres} m in total.`,
+                              `全程大约 ${step.distanceMetres} 米。`,
+                            )}
+                          </p>
+                        ) : (
+                          <p className="instruction-detail">
+                            {step.detail[language]}
+                          </p>
+                        )}
+                        {state.stepIndex < journey.steps.length - 1 ? (
+                          <p className="next-preview">
+                            {t("After this: ", "接下来：")}
+                            {journey.steps[state.stepIndex + 1].instruction[language]}
+                          </p>
+                        ) : (
+                          <p className="next-preview">
+                            {t("This is the last step.", "这是最后一步。")}
+                          </p>
+                        )}
                         {listen(
                           [step.instruction[language],
                            ...step.directions.map((direction) => direction[language])].join(" "),
@@ -1522,12 +1559,20 @@ function App() {
                             : t("Live travel conditions", "实时路况")}
                         </strong>
                       </div>
-                      <p>
-                        {t(
-                          "Crowding unknown · lift status not verified",
-                          "拥挤程度未知 · 电梯状态未核实",
-                        )}
-                      </p>
+                      {journey.alerts.length === 0 ? (
+                        <p>
+                          {t(
+                            "Checked: no train disruption on this route, no lift maintenance reported at his stations, no rain expected on the walks.",
+                            "已核查：本路线无列车故障通告，上下车车站无电梯维修记录，步行沿途暂无降雨。",
+                          )}
+                        </p>
+                      ) : (
+                        <ul className="conditions-alerts">
+                          {journey.alerts.map((alert) => (
+                            <li key={alert.id}>{alert.message[language]}</li>
+                          ))}
+                        </ul>
+                      )}
                       <div className="conditions-bottom">
                         <span>
                           {t("Last update", "最后更新")}{" "}

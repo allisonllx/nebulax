@@ -58,6 +58,7 @@ export const journeySchema = z.object({
         detail: bilingual,
         confirmation: bilingual,
         durationMinutes: z.number().nonnegative(),
+        distanceMetres: z.number().nonnegative().nullish(),
         place: bilingual,
       }),
     )

@@ -82,10 +82,12 @@ def convert(raw: dict, *, pace_factor: float, origin: Place, destination: Place)
         service = leg.get("route") if mode == "bus" else None
         station_codes: list[str] = []
 
+        coords = decode_polyline(leg["legGeometry"]["points"])
         walk_directions: list[Text] = []
         if mode == "walk":
             texts = [instructions.walk(max(round(seconds / 60), 1), to_name, to_is_station)]
-            walk_directions = instructions.walk_directions(leg.get("steps") or [])
+            walk_directions = (instructions.walk_directions(leg.get("steps") or [])
+                               or instructions.walk_fallback_direction(coords, round(leg["distance"])))
         elif mode == "bus":
             bus_services.append(service)
             texts = [instructions.board_bus(service), instructions.alight_bus(to_name)]
@@ -130,7 +132,7 @@ def convert(raw: dict, *, pace_factor: float, origin: Place, destination: Place)
             "properties": {"legId": leg_id, "role": "recommended", "mode": mode, "line": line,
                            "service": service, "status": "normal", "affected": False,
                            "stepIds": step_ids, "stationCodes": station_codes},
-            "geometry": {"type": "LineString", "coordinates": decode_polyline(leg["legGeometry"]["points"])},
+            "geometry": {"type": "LineString", "coordinates": coords},
         })
 
     return CandidatePlan(steps=steps, features=features, total_seconds=total,
