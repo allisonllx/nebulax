@@ -1,0 +1,583 @@
+{
+  "duration": 1397,
+  "startTime": 1789956589000,
+  "endTime": 1789957986000,
+  "walkTime": 571,
+  "transitTime": 635,
+  "waitingTime": 191,
+  "walkDistance": 620.84,
+  "walkLimitExceeded": false,
+  "generalizedCost": 5799,
+  "elevationLost": 0,
+  "elevationGained": 0,
+  "transfers": 1,
+  "fare": "1.68",
+  "legs": [
+    {
+      "startTime": 1789956589000,
+      "endTime": 1789956714000,
+      "departureDelay": 0,
+      "arrivalDelay": 0,
+      "realTime": false,
+      "distance": 120.17,
+      "generalizedCost": 760,
+      "pathway": false,
+      "mode": "WALK",
+      "transitLeg": false,
+      "route": "",
+      "agencyTimeZoneOffset": 28800000,
+      "interlineWithPreviousLeg": false,
+      "from": {
+        "name": "Origin",
+        "lon": 103.8454,
+        "lat": 1.3691,
+        "departure": 1789956589000,
+        "vertexType": "NORMAL"
+      },
+      "to": {
+        "name": "BLK 700B",
+        "stopId": "FERRY:54241",
+        "stopCode": "54241",
+        "lon": 103.8461801,
+        "lat": 1.3691352,
+        "arrival": 1789956714000,
+        "departure": 1789956714000,
+        "vertexType": "TRANSIT"
+      },
+      "legGeometry": {
+        "points": "}kjGahyxRMAACCCBc@@AGMCIDCBM@OAWAUDc@BBBD",
+        "length": 16
+      },
+      "steps": [
+        {
+          "distance": 120.15,
+          "relativeDirection": "DEPART",
+          "streetName": "path",
+          "absoluteDirection": "NORTH",
+          "stayOn": false,
+          "area": false,
+          "bogusName": true,
+          "lon": 103.845295,
+          "lat": 1.3691156,
+          "elevation": "",
+          "walkingBike": false
+        }
+      ],
+      "rentedBike": false,
+      "walkingBike": false,
+      "duration": 125,
+      "_walking_detail": {
+        "status_message": "Found route between points",
+        "route_geometry": "_ljGchyxRKACACCBc@BCIMCGDEBMBOAWASDe@@B",
+        "status": 0,
+        "route_instructions": [
+          [
+            "Right",
+            "",
+            36,
+            "1.369116,103.845295",
+            26,
+            "36m",
+            "North",
+            "North",
+            "walking",
+            "Head North"
+          ],
+          [
+            "Left",
+            "",
+            15,
+            "1.369184,103.845538",
+            11,
+            "15m",
+            "North East",
+            "East",
+            "walking",
+            "Turn Left"
+          ],
+          [
+            "Right",
+            "",
+            68,
+            "1.369249,103.845651",
+            49,
+            "68m",
+            "South East",
+            "North East",
+            "walking",
+            "Turn Right"
+          ],
+          [
+            "Sharp Right",
+            "",
+            3,
+            "1.369172,103.846236",
+            2,
+            "3m",
+            "South West",
+            "East",
+            "walking",
+            "Make A Sharp Right"
+          ],
+          [
+            "Destination",
+            "",
+            0,
+            "1.369159,103.846217",
+            0,
+            "0m",
+            "North",
+            "South West",
+            "walking",
+            "You Have Arrived At Your Destination"
+          ]
+        ],
+        "route_name": [
+          ""
+        ],
+        "route_summary": {
+          "start_point": "",
+          "end_point": "",
+          "total_time": 87,
+          "total_distance": 120
+        }
+      }
+    },
+    {
+      "startTime": 1789956714000,
+      "endTime": 1789956786000,
+      "departureDelay": 0,
+      "arrivalDelay": 0,
+      "realTime": false,
+      "distance": 529.18,
+      "generalizedCost": 672,
+      "pathway": false,
+      "mode": "BUS",
+      "transitLeg": true,
+      "route": "76",
+      "agencyName": "SBS Transit",
+      "agencyUrl": "http://www.sbstransit.com.sg/",
+      "agencyTimeZoneOffset": 28800000,
+      "routeType": 3,
+      "routeId": "76",
+      "interlineWithPreviousLeg": false,
+      "agencyId": "1:SBST",
+      "tripId": "76-1-2008",
+      "serviceDate": "2026-09-21",
+      "from": {
+        "name": "BLK 700B",
+        "stopId": "FERRY:54241",
+        "stopCode": "54241",
+        "lon": 103.8461801,
+        "lat": 1.3691352,
+        "arrival": 1789956714000,
+        "departure": 1789956714000,
+        "stopIndex": 9,
+        "stopSequence": 10,
+        "vertexType": "TRANSIT"
+      },
+      "to": {
+        "name": "AFT ANG MO KIO STN EXIT A",
+        "stopId": "FERRY:54261",
+        "stopCode": "54261",
+        "lon": 103.850814,
+        "lat": 1.3694545,
+        "arrival": 1789956786000,
+        "departure": 1789956786000,
+        "stopIndex": 10,
+        "stopSequence": 11,
+        "vertexType": "TRANSIT"
+      },
+      "intermediateStops": [],
+      "legGeometry": {
+        "points": "ekjGomyxR??HcBDe@TyEBs@?YGqBQsAKi@Ie@CMs@gEAK",
+        "length": 14
+      },
+      "steps": [],
+      "routeShortName": "76",
+      "routeLongName": "SBST BUS 76",
+      "duration": 72
+    },
+    {
+      "startTime": 1789956786000,
+      "endTime": 1789956959000,
+      "departureDelay": 0,
+      "arrivalDelay": 0,
+      "realTime": false,
+      "distance": 195.19,
+      "generalizedCost": 1215,
+      "pathway": false,
+      "mode": "WALK",
+      "transitLeg": false,
+      "route": "",
+      "agencyTimeZoneOffset": 28800000,
+      "interlineWithPreviousLeg": false,
+      "from": {
+        "name": "AFT ANG MO KIO STN EXIT A",
+        "stopId": "FERRY:54261",
+        "stopCode": "54261",
+        "lon": 103.850814,
+        "lat": 1.3694545,
+        "arrival": 1789956786000,
+        "departure": 1789956786000,
+        "vertexType": "TRANSIT"
+      },
+      "to": {
+        "name": "ANG MO KIO MRT STATION",
+        "stopId": "FERRY:NS16",
+        "stopCode": "NS16",
+        "lon": 103.8495803,
+        "lat": 1.3698566,
+        "arrival": 1789956959000,
+        "departure": 1789957150000,
+        "vertexType": "TRANSIT"
+      },
+      "legGeometry": {
+        "points": "anjGqjzxRC?BLBVFb@Ll@BRF\\FLOFq@Vc@PHNWLIQ",
+        "length": 15
+      },
+      "steps": [
+        {
+          "distance": 195.2,
+          "relativeDirection": "DEPART",
+          "streetName": "path",
+          "absoluteDirection": "WEST",
+          "stayOn": false,
+          "area": false,
+          "bogusName": true,
+          "lon": 103.8508103,
+          "lat": 1.3694704,
+          "elevation": "",
+          "walkingBike": false
+        }
+      ],
+      "rentedBike": false,
+      "walkingBike": false,
+      "duration": 173,
+      "_walking_detail": {
+        "status_message": "Found route between points",
+        "route_geometry": "enjGqjzxR@JDVFb@Jl@DTF\\FJOFs@Xc@PHNWL",
+        "status": 0,
+        "route_instructions": [
+          [
+            "Head",
+            "",
+            106,
+            "1.36947,103.85081",
+            76,
+            "106m",
+            "West",
+            "North",
+            "walking",
+            "Head West"
+          ],
+          [
+            "Right",
+            "",
+            64,
+            "1.369222,103.849898",
+            46,
+            "64m",
+            "North West",
+            "South West",
+            "walking",
+            "Turn Right"
+          ],
+          [
+            "Left",
+            "",
+            11,
+            "1.369736,103.849642",
+            8,
+            "11m",
+            "South West",
+            "North West",
+            "walking",
+            "Turn Left"
+          ],
+          [
+            "Right",
+            "",
+            16,
+            "1.369685,103.849564",
+            12,
+            "16m",
+            "North West",
+            "South West",
+            "walking",
+            "Turn Right"
+          ],
+          [
+            "Right",
+            "",
+            0,
+            "1.369807,103.849492",
+            0,
+            "0m",
+            "North",
+            "North West",
+            "walking",
+            "You Have Arrived At Your Destination, On The Right"
+          ]
+        ],
+        "route_name": [
+          ""
+        ],
+        "route_summary": {
+          "start_point": "",
+          "end_point": "",
+          "total_time": 141,
+          "total_distance": 196
+        }
+      }
+    },
+    {
+      "startTime": 1789957150000,
+      "endTime": 1789957713000,
+      "departureDelay": 0,
+      "arrivalDelay": 0,
+      "realTime": false,
+      "distance": 5919.93,
+      "generalizedCost": 1242,
+      "pathway": false,
+      "mode": "SUBWAY",
+      "transitLeg": true,
+      "route": "NS",
+      "agencyName": "SMRT Corporation",
+      "agencyUrl": "http://www.smrt.com.sg/",
+      "agencyTimeZoneOffset": 28800000,
+      "routeType": 1,
+      "routeId": "NS",
+      "interlineWithPreviousLeg": false,
+      "agencyId": "1:SMRT",
+      "tripId": "NS-2-3001",
+      "serviceDate": "2026-09-21",
+      "from": {
+        "name": "ANG MO KIO MRT STATION",
+        "stopId": "FERRY:NS16",
+        "stopCode": "NS16",
+        "lon": 103.8495803,
+        "lat": 1.3698566,
+        "arrival": 1789956959000,
+        "departure": 1789957150000,
+        "stopIndex": 14,
+        "stopSequence": 16,
+        "vertexType": "TRANSIT"
+      },
+      "to": {
+        "name": "NOVENA MRT STATION",
+        "stopId": "FERRY:NS20",
+        "stopCode": "NS20",
+        "lon": 103.8438426,
+        "lat": 1.3204584,
+        "arrival": 1789957713000,
+        "departure": 1789957713000,
+        "stopIndex": 18,
+        "stopSequence": 20,
+        "vertexType": "TRANSIT"
+      },
+      "intermediateStops": [
+        {
+          "name": "BISHAN MRT STATION",
+          "stopId": "FERRY:NS17",
+          "stopCode": "NS17",
+          "lon": 103.8481801,
+          "lat": 1.3508269,
+          "arrival": 1789957340000,
+          "departure": 1789957370000,
+          "stopIndex": 15,
+          "stopSequence": 17,
+          "vertexType": "TRANSIT"
+        },
+        {
+          "name": "BRADDELL MRT STATION",
+          "stopId": "FERRY:NS18",
+          "stopCode": "NS18",
+          "lon": 103.8467469,
+          "lat": 1.3401584,
+          "arrival": 1789957464000,
+          "departure": 1789957494000,
+          "stopIndex": 16,
+          "stopSequence": 18,
+          "vertexType": "TRANSIT"
+        },
+        {
+          "name": "TOA PAYOH MRT STATION",
+          "stopId": "FERRY:NS19",
+          "stopCode": "NS19",
+          "lon": 103.8475893,
+          "lat": 1.3324629,
+          "arrival": 1789957566000,
+          "departure": 1789957596000,
+          "stopIndex": 17,
+          "stopSequence": 19,
+          "vertexType": "TRANSIT"
+        }
+      ],
+      "legGeometry": {
+        "points": "cqjG{czxRlAk@FCFCNING??NGNGNGNGPGNEB?LENEJCDANCPENGB?LENENGNGFCHCLGNIrRcJLG@?NINGNGNINGNGNGLE@APENENGPEPCNEPCPCPCPCNAPAPAPAPAP?R?P?P?P@P?P@P@PBN@PBPBPBPDNDPBND@@NDNDNFPFNDNFdIxCDBHBPFNFNFNFD@HDNFNFNHNFLHNHNFLHNHLHNJLHLHLJHDDBLJLJLHLJf@`@FDDDLJLJLHLJLHNJDBFDLHNJLH@?LFLHNHNFNHFDF@LH|BdAJDBBNFNHNFNFNHNFB@JBNFPFNDNDPDNDPDJBD@NBPBPBPBNBPBbGx@pDd@@@??|BXPB??NBPBH@F@PBPDL@@@PBPDjCb@HBz@Nr@JzMhBb@Db@FP@b@Db@Bb@@b@@b@?P?b@?zFIb@Av@?nCAb@?b@@~DJb@@??X@jBF`@Bn@Hf@J|@TbAZb@Lj@Hv@Jx@Bx@@l@Ej@Ed@Gh@Kf@MVIh@Sn@W|Aq@t@[d@Qh@Qb@Ml@Of@Il@KjC]b@G??fEk@b@GPAb@EPAPAP?PAP?P?P?P@P?P@P@PBP@\\FTDb@HNBb@JlFpAd@L\\Hb@HNBb@HPB`@Fb@FP@t@HtE`@ZDVBb@Fb@F`@Hb@HND`@HPD`@L^LPDNF^NNF^N^PNF^P\\RNHLH\\RZT\\TLJTRPLZV`FjEBB",
+        "length": 296
+      },
+      "steps": [],
+      "routeShortName": "NS",
+      "routeLongName": "NORTH SOUTH LINE",
+      "duration": 563
+    },
+    {
+      "startTime": 1789957713000,
+      "endTime": 1789957986000,
+      "departureDelay": 0,
+      "arrivalDelay": 0,
+      "realTime": false,
+      "distance": 305.48,
+      "generalizedCost": 1909,
+      "pathway": false,
+      "mode": "WALK",
+      "transitLeg": false,
+      "route": "",
+      "agencyTimeZoneOffset": 28800000,
+      "interlineWithPreviousLeg": false,
+      "from": {
+        "name": "NOVENA MRT STATION",
+        "stopId": "FERRY:NS20",
+        "stopCode": "NS20",
+        "lon": 103.8438426,
+        "lat": 1.3204584,
+        "arrival": 1789957713000,
+        "departure": 1789957713000,
+        "vertexType": "TRANSIT"
+      },
+      "to": {
+        "name": "Destination",
+        "lon": 103.8459,
+        "lat": 1.3214,
+        "arrival": 1789957986000,
+        "vertexType": "NORMAL"
+      },
+      "legGeometry": {
+        "points": "y{`G__yxR??a@a@s@s@RWMMMM_@[RULMAk@X]SSPS_BmAA@",
+        "length": 16
+      },
+      "steps": [
+        {
+          "distance": 305.48,
+          "relativeDirection": "DEPART",
+          "streetName": "path",
+          "absoluteDirection": "NORTHEAST",
+          "stayOn": false,
+          "area": false,
+          "bogusName": true,
+          "lon": 103.8438426,
+          "lat": 1.3204583,
+          "elevation": "",
+          "walkingBike": false
+        }
+      ],
+      "rentedBike": false,
+      "walkingBike": false,
+      "duration": 273,
+      "_walking_detail": {
+        "status_message": "Found route between points",
+        "route_geometry": "{{`G__yxRKaAV[DCCCBCEEGGACq@y@C@CBA?AA[[CBAm@Z]SQPUaBkA",
+        "status": 0,
+        "route_instructions": [
+          [
+            "Head",
+            "",
+            62,
+            "1.320458,103.843843",
+            45,
+            "62m",
+            "East",
+            "North",
+            "walking",
+            "Head East"
+          ],
+          [
+            "Left",
+            "",
+            62,
+            "1.320368,103.844325",
+            45,
+            "62m",
+            "North East",
+            "South East",
+            "walking",
+            "Turn Left"
+          ],
+          [
+            "Left",
+            "",
+            6,
+            "1.320704,103.84475",
+            4,
+            "6m",
+            "North West",
+            "North East",
+            "walking",
+            "Turn Left"
+          ],
+          [
+            "Right",
+            "",
+            25,
+            "1.320738,103.844717",
+            18,
+            "25m",
+            "North East",
+            "North West",
+            "walking",
+            "Turn Right"
+          ],
+          [
+            "Left",
+            "",
+            4,
+            "1.320895,103.844874",
+            3,
+            "4m",
+            "North West",
+            "North East",
+            "walking",
+            "Turn Left"
+          ],
+          [
+            "Uturn",
+            "",
+            148,
+            "1.320918,103.84485",
+            107,
+            "148m",
+            "East",
+            "North West",
+            "walking",
+            "Make A U-turn"
+          ],
+          [
+            "Straight",
+            "",
+            0,
+            "1.321292,103.845809",
+            0,
+            "0m",
+            "North",
+            "North East",
+            "walking",
+            "You Have Arrived At Your Destination, Straight Ahead"
+          ]
+        ],
+        "route_name": [
+          ""
+        ],
+        "route_summary": {
+          "start_point": "",
+          "end_point": "",
+          "total_time": 220,
+          "total_distance": 305
+        }
+      }
+    }
+  ],
+  "tooSloped": false,
+  "arrivedAtDestinationWithRentedBicycle": false
+}

@@ -1,3 +1,4 @@
+import { stepGuidance } from "./stepGuidance";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -132,7 +133,8 @@ function App() {
   const [replanBusy, setReplanBusy] = useState(false);
   // Shown once after an automatic off-route recovery, until he acknowledges or moves on.
   const [recovered, setRecovered] = useState(false);
-  const [previousJourney, setPreviousJourney] = useState<import("./journey").Journey>();
+  const [previousJourney, setPreviousJourney] =
+    useState<import("./journey").Journey>();
   useLayoutEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -160,13 +162,30 @@ function App() {
   // Speak each active step aloud and repeat it on an interval — the persona (memory loss) needs
   // the reminder to keep coming, not just play once. GPS-anchored phrasing is a separate feature.
   useEffect(() => {
-    if (!state || state.phase !== "active" || personaMode !== "elder") return;
+    if (
+      !state ||
+      state.phase !== "active" ||
+      personaMode !== "elder" ||
+      view !== "journey"
+    )
+      return;
     if (!("speechSynthesis" in window)) return;
     const current = state.journey.steps[state.stepIndex];
     // The full step: headline plus the turn-by-turn directions.
     const fullText = [
-      current.instruction[language],
-      ...current.directions.map((direction) => direction[language]),
+      current.substeps?.length
+        ? current.substeps[
+            Math.min(
+              state.guidanceProgress?.[
+                `${state.journey.id}:${state.journey.version}:${current.id}`
+              ] ?? 0,
+              current.substeps.length - 1,
+            )
+          ].instruction[language]
+        : [
+            stepGuidance(state.journey, current, language).instruction,
+            ...current.directions.map((d) => d[language]),
+          ].join(" "),
     ].join(" ");
     const say = (full: boolean) => {
       // Reminders are location-aware when GPS has a fresh fix on a walking leg;
@@ -175,7 +194,12 @@ function App() {
       const fresh = live && Date.now() - live.at < 20000;
       if (!full && fresh && live.off) return; // the off-route warning owns the audio right now
       let spoken = fullText;
-      if (!full && fresh && current.mode === "walk") {
+      if (
+        !full &&
+        fresh &&
+        current.mode === "walk" &&
+        !current.substeps?.length
+      ) {
         spoken =
           language === "en"
             ? `Keep going. About ${live.endMetres} metres left to ${current.place.en}.`
@@ -192,7 +216,16 @@ function App() {
     const timer = window.setInterval(() => say(false), repeatSeconds * 1000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.phase, state?.stepIndex, personaMode, language, repeatSeconds]);
+  }, [
+    state?.phase,
+    state?.stepIndex,
+    state?.guidanceProgress,
+    state?.journey,
+    personaMode,
+    language,
+    repeatSeconds,
+    view,
+  ]);
   useEffect(() => {
     try {
       localStorage.setItem("nebulax:repeat", String(repeatSeconds));
@@ -333,7 +366,11 @@ function App() {
     // It stays until the family dismisses it — wandering is itself the signal.
     const current = stateRef.current;
     if (!current) return;
-    if (fix.off && fix.routeMetres >= 300 && Date.now() - lostWriteRef.current >= 30000) {
+    if (
+      fix.off &&
+      fix.routeMetres >= 300 &&
+      Date.now() - lostWriteRef.current >= 30000
+    ) {
       lostWriteRef.current = Date.now();
       setState({
         ...current,
@@ -728,7 +765,9 @@ function App() {
   const stepNumber = state ? state.stepIndex + 1 : 1;
 
   return (
-    <div className={`app calm-app ${personaMode} ${state?.phase ?? "setup"} ${large ? "large-text" : ""}`}>
+    <div
+      className={`app calm-app ${personaMode} ${state?.phase ?? "setup"} ${large ? "large-text" : ""}`}
+    >
       <a href="#main" className="skip-link">
         {t("Skip to journey", "跳至行程")}
       </a>
@@ -956,9 +995,14 @@ function App() {
                 </section>
               )}
             {personaMode === "caregiver" && view === "journey" ? (
-              <CaregiverDashboard snapshot={state} language={language} position={liveFix}
+              <CaregiverDashboard
+                snapshot={state}
+                language={language}
+                position={liveFix}
                 onDismiss={() => setState({ ...state, lostAlert: null })}
-                onDetails={() => go("details")} onFamily={() => go("profile")} />
+                onDetails={() => go("details")}
+                onFamily={() => go("profile")}
+              />
             ) : view === "family" ? (
               <FamilyPanel
                 snapshot={state}
@@ -970,23 +1014,38 @@ function App() {
               />
             ) : view === "appointment" ? (
               <>
-              <AppointmentPanel
-                snapshot={state}
-                language={language}
-                busy={busy}
-                offline={offline}
-                onSave={updateAppointment}
-                onAccept={(candidate) => updateAppointment(candidate, true)}
-                onDecline={() =>
-                  updateFamily({
-                    ...state.family,
-                    proposal: null,
-                    review: "declined",
-                  })
-                }
-              />
-              {!isDemo && state.phase !== "active" && <TripPlanner language={language} profile={profile}
-                onPlanned={(chosen) => setState({ ...state, journey: chosen, stepIndex: 0, phase: "planned", blocked: false, proposal: null, progressUpdatedAt: null })} />}
+                <AppointmentPanel
+                  snapshot={state}
+                  language={language}
+                  busy={busy}
+                  offline={offline}
+                  onSave={updateAppointment}
+                  onAccept={(candidate) => updateAppointment(candidate, true)}
+                  onDecline={() =>
+                    updateFamily({
+                      ...state.family,
+                      proposal: null,
+                      review: "declined",
+                    })
+                  }
+                />
+                {!isDemo && state.phase !== "active" && (
+                  <TripPlanner
+                    language={language}
+                    profile={profile}
+                    onPlanned={(chosen) =>
+                      setState({
+                        ...state,
+                        journey: chosen,
+                        stepIndex: 0,
+                        phase: "planned",
+                        blocked: false,
+                        proposal: null,
+                        progressUpdatedAt: null,
+                      })
+                    }
+                  />
+                )}
               </>
             ) : view === "profile" ? (
               <Onboarding
@@ -1264,7 +1323,11 @@ function App() {
                 </div>
                 <div className="journey-grid">
                   <section className="card">
-                    <p className="calm-trip-timing">{t("Leave", "出发")} {time(journey.departureTime)} · {t("Estimated arrival", "预计到达")} <strong>{timeRange}</strong></p>
+                    <p className="calm-trip-timing">
+                      {t("Leave", "出发")} {time(journey.departureTime)} ·{" "}
+                      {t("Estimated arrival", "预计到达")}{" "}
+                      <strong>{timeRange}</strong>
+                    </p>
                     <div className="section-heading">
                       <h2>{t("Your steps", "行程步骤")}</h2>
                       <span className="pill">
@@ -1302,7 +1365,9 @@ function App() {
                               </span>
                               <h3>{item.instruction[language]}</h3>
                               <p>{item.detail[language]}</p>
-                              {item.directions.map((direction, i) => <p key={i}>{direction[language]}</p>)}
+                              {item.directions.map((direction, i) => (
+                                <p key={i}>{direction[language]}</p>
+                              ))}
                             </div>
                           </li>
                         );
@@ -1320,10 +1385,21 @@ function App() {
                   </section>
                   <LiveMap journey={journey} language={language} />
                 </div>
-                <details className="calm-disclosure"><summary>{t("Travel conditions", "路线状况")}</summary>
-                  {journey.alerts.map(alert => <p key={alert.id}>{alert.message[language]}</p>)}
-                  <p>{t("Last checked", "最后检查")} {time(journey.updatedAt)}</p>
-                  <button className="secondary" disabled={offline || busy} onClick={() => refresh()}>{t("Check for updates", "检查更新")}</button>
+                <details className="calm-disclosure">
+                  <summary>{t("Travel conditions", "路线状况")}</summary>
+                  {journey.alerts.map((alert) => (
+                    <p key={alert.id}>{alert.message[language]}</p>
+                  ))}
+                  <p>
+                    {t("Last checked", "最后检查")} {time(journey.updatedAt)}
+                  </p>
+                  <button
+                    className="secondary"
+                    disabled={offline || busy}
+                    onClick={() => refresh()}
+                  >
+                    {t("Check for updates", "检查更新")}
+                  </button>
                 </details>
               </>
             ) : state.phase === "arrived" ? (
@@ -1411,27 +1487,113 @@ function App() {
                   </section>
                 )}
                 {state.phase === "planned" ? (
-                  <ElderHome journey={journey} language={language} linked={state.family.linked}
-                    phone={state.family.phone} disabled={busy || state.blocked || Boolean(state.proposal)}
-                    onStart={advance} onDetails={() => go("details")} onHelp={() => go("help")} />
+                  <ElderHome
+                    journey={journey}
+                    language={language}
+                    linked={state.family.linked}
+                    phone={state.family.phone}
+                    disabled={busy || state.blocked || Boolean(state.proposal)}
+                    onStart={advance}
+                    onDetails={() => go("details")}
+                    onHelp={() => go("help")}
+                  />
                 ) : (
-                  <ElderGuidance journey={journey} language={language} index={state.stepIndex}
-                    position={liveFix && Date.now()-liveFix.at < 20000 ? liveFix : null}
-                    remaining={liveFix && Date.now()-liveFix.at < 20000 && !liveFix.off ? liveFix.endMetres : undefined}
-                    off={Boolean(liveFix?.off)} recovering={replanBusy} recovered={recovered} previous={previousJourney}
-                    onContinue={() => { setRecovered(false); setPreviousJourney(undefined); }}
-                    onRepeat={() => speech.speak(liveFix?.off ? t("Stop somewhere safe. Contact your family if you need help.", "请在安全的地方停下，需要帮助时请联系女儿。") : [step.instruction[language], ...step.directions.map(d => d[language])].join(" "))}
-                    onHelp={() => go("help")} phone={state.family.phone} onDetails={() => go("details")}
+                  <ElderGuidance
+                    key={`${journey.id}-${journey.version}-${step.id}`}
+                    journey={journey}
+                    progress={
+                      state.guidanceProgress?.[
+                        `${journey.id}:${journey.version}:${step.id}`
+                      ] ?? 0
+                    }
+                    onProgress={(value) =>
+                      setState(
+                        (current) =>
+                          current && {
+                            ...current,
+                            guidanceProgress: {
+                              ...current.guidanceProgress,
+                              [`${journey.id}:${journey.version}:${step.id}`]:
+                                value,
+                            },
+                          },
+                      )
+                    }
+                    onSpeak={speech.speak}
+                    language={language}
+                    index={state.stepIndex}
+                    position={
+                      liveFix && Date.now() - liveFix.at < 20000
+                        ? liveFix
+                        : null
+                    }
+                    remaining={
+                      liveFix && Date.now() - liveFix.at < 20000 && !liveFix.off
+                        ? liveFix.endMetres
+                        : undefined
+                    }
+                    off={Boolean(liveFix?.off)}
+                    recovering={replanBusy}
+                    recovered={recovered}
+                    previous={previousJourney}
+                    onContinue={() => {
+                      setRecovered(false);
+                      setPreviousJourney(undefined);
+                    }}
+                    onRepeat={() =>
+                      speech.speak(
+                        liveFix?.off
+                          ? t(
+                              "Stop somewhere safe. Contact your family if you need help.",
+                              "请在安全的地方停下，需要帮助时请联系女儿。",
+                            )
+                          : [
+                              stepGuidance(state.journey, step, language)
+                                .instruction,
+                              ...step.directions.map((d) => d[language]),
+                            ].join(" "),
+                      )
+                    }
+                    onHelp={() => go("help")}
+                    phone={state.family.phone}
+                    onDetails={() => go("details")}
                     onBack={goBack}
-                    controls={<LocationGuidance key={`${journey.id}-${journey.version}-${step.id}`}
-                      journey={journey} stepIndex={state.stepIndex} enabled={locationEnabled}
-                      onEnable={setLocationEnabled} language={language}
-                      disabled={busy || state.blocked || Boolean(state.proposal) || replanBusy || recovered}
-                      onAdvance={advance} onHelp={() => go("help")} voice={true}
-                      nearLabel={nearLabel} replanBusy={replanBusy} onStatus={handleLiveFix} compact />}
+                    controls={
+                      <LocationGuidance
+                        key={`${journey.id}-${journey.version}-${step.id}`}
+                        journey={journey}
+                        stepIndex={state.stepIndex}
+                        enabled={locationEnabled}
+                        onEnable={setLocationEnabled}
+                        language={language}
+                        disabled={
+                          busy ||
+                          state.blocked ||
+                          Boolean(state.proposal) ||
+                          replanBusy ||
+                          recovered
+                        }
+                        onAdvance={advance}
+                        onHelp={() => go("help")}
+                        voice={true}
+                        nearLabel={nearLabel}
+                        replanBusy={replanBusy}
+                        onStatus={handleLiveFix}
+                        compact
+                      />
+                    }
                   />
                 )}
-                <p className="calm-save-note">{saved && shellReady ? t("Saved for offline use", "已保存，可离线查看") : saved ? t("Instructions saved on this phone", "指引已保存在此手机上") : t("Journey could not be saved", "无法保存行程")}</p>
+                <p className="calm-save-note">
+                  {saved && shellReady
+                    ? t("Saved for offline use", "已保存，可离线查看")
+                    : saved
+                      ? t(
+                          "Instructions saved on this phone",
+                          "指引已保存在此手机上",
+                        )
+                      : t("Journey could not be saved", "无法保存行程")}
+                </p>
               </>
             )}
           </>
@@ -1497,9 +1659,30 @@ function App() {
       {state && (
         <details className="calm-demo-switch">
           <summary>{t("Demo views", "演示视角")}</summary>
-          <p>{t("Same-browser preview only. No remote sharing.", "仅预览此浏览器中的两个视角，未连接其他手机。")}</p>
-          <button className="secondary" onClick={() => {setPersonaMode("elder"); go("journey");}}>{t("Mr Tan's view", "长辈模式")}</button>
-          <button className="secondary" onClick={() => {setPersonaMode("caregiver"); go("journey");}}>{t("Family view", "家人模式")}</button>
+          <p>
+            {t(
+              "Same-browser preview only. No remote sharing.",
+              "仅预览此浏览器中的两个视角，未连接其他手机。",
+            )}
+          </p>
+          <button
+            className="secondary"
+            onClick={() => {
+              setPersonaMode("elder");
+              go("journey");
+            }}
+          >
+            {t("Mr Tan's view", "长辈模式")}
+          </button>
+          <button
+            className="secondary"
+            onClick={() => {
+              setPersonaMode("caregiver");
+              go("journey");
+            }}
+          >
+            {t("Family view", "家人模式")}
+          </button>
         </details>
       )}
       <footer className="site-footer">

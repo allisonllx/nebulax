@@ -72,6 +72,30 @@ class OneMapClient:
                 r = await http.get(f"{BASE}/public/routingsvc/route", params={**params_common, "mode": mode})
                 r.raise_for_status()
                 out.extend(r.json().get("plan", {}).get("itineraries", []))
+            # One request per distinct walking leg, concurrently with a small cap.
+            # Optional detail failure never takes down the public-transport plan.
+            walks = {}
+            for itinerary in out:
+                for leg in itinerary.get("legs", []):
+                    if leg.get("mode") == "WALK":
+                        key = (leg["from"]["lat"], leg["from"]["lon"], leg["to"]["lat"], leg["to"]["lon"])
+                        walks.setdefault(key, []).append(leg)
+            semaphore = asyncio.Semaphore(3)
+            async def enrich(key, legs):
+                async with semaphore:
+                    try:
+                        r = await http.get(f"{BASE}/public/routingsvc/route", params={
+                            "start": f"{key[0]},{key[1]}", "end": f"{key[2]},{key[3]}", "routeType":"walk"}, timeout=5)
+                        r.raise_for_status()
+                        detail = r.json()
+                        for leg in legs:
+                            leg["_walking_detail"] = detail
+                    except (httpx.HTTPError, ValueError):
+                        pass
+            try:
+                await asyncio.wait_for(asyncio.gather(*(enrich(key, legs) for key, legs in list(walks.items())[:12])), timeout=4)
+            except TimeoutError:
+                pass  # retain any detail already fetched; do not delay the base plan indefinitely
         return out
 
 

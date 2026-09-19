@@ -24,7 +24,26 @@ class Place(ApiModel):
 Mode = Literal["walk", "bus", "train"]
 
 
+class WalkingSubstep(ApiModel):
+    id: str
+    instruction: Text
+    maneuver: str
+    distance_metres: int
+    duration_seconds: int
+    coordinates: list[list[float]]
+
+
+class TransitStop(Place):
+    code: str | None = None
+
+
 class Step(ApiModel):
+    from_place: Place | None = None
+    to_place: Place | None = None
+    action: Literal["walk", "board", "ride"] | None = None
+    substeps: list[WalkingSubstep] = []
+    stops: list[TransitStop] = []
+    stops_complete: bool = False
     id: str
     leg_id: str
     mode: Mode

@@ -272,3 +272,32 @@ M1–M4 cover the backend half of all three mandatory capabilities.
 7. **GCP project and credits** — who holds the project, and have we claimed the credits?
 8. Two items still open with the organisers: submission address/deadline, and the missing
    `PS2_scoring_rubric.md`.
+
+
+### Additive substep fields (19 September 2026)
+
+Each step now optionally exposes `fromPlace`, `toPlace`, and `action` (`walk`, `board`,
+`ride`). Existing `directions`, major-step IDs, confirmation and timing fields remain compatible.
+
+- `substeps`: walking manoeuvres with `id`, bilingual `instruction`, `maneuver`,
+  `distanceMetres`, `durationSeconds`, and GeoJSON-order `coordinates` for the highlighted section.
+- `stops`: ordered boarding, intermediate and alighting stops with bilingual `name`,
+  `lat`, `lon`, and optional `code`. `stopsComplete` distinguishes a full provider sequence
+  from incomplete data; incomplete data must not produce a remaining-stop count.
+
+OneMap PT candidates are optionally enriched through `routeType=walk`. Requests are
+coalesced within each plan and capped at three concurrent calls, twelve distinct legs and
+four seconds overall. A failure leaves the original plan usable. Detail is used only if the
+walking response matches the original path within the documented geometric tolerances;
+otherwise `substeps` is empty. Original transit-leg geometry and timing remain unchanged.
+Manoeuvre times are allocated from the existing pace-adjusted walking duration, so substep
+seconds sum to the leg duration. These are estimates, not live ETAs or verified step-free claims.
+Unknown manoeuvres and missing road names never become invented crossings or landmarks.
+
+The frontend persists manual substep/stop progress by journey ID, version and major-step ID.
+It does not infer train progress underground or automatically advance on elapsed time.
+Boarding location checks use the beginning of the leg; alighting uses the end.
+
+Recorded example: `docs/fixtures/plan.substeps.json`, generated from the recorded OneMap
+response `backend/tests/data/onemap_enriched.json`. These are test fixtures, not current live advice.
+Old saved journeys remain readable but need replanning to acquire the additional detail.

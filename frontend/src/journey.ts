@@ -56,6 +56,25 @@ export const journeySchema = z.object({
         id: z.string(),
         legId: z.string().optional(),
         mode: z.enum(["walk", "train", "bus", "lift"]),
+        fromPlace: endpointSchema.nullish(),
+        toPlace: endpointSchema.nullish(),
+        action: z.enum(["walk", "board", "ride"]).nullish(),
+        substeps: z
+          .array(
+            z.object({
+              id: z.string(),
+              instruction: bilingual,
+              maneuver: z.string(),
+              distanceMetres: z.number().nonnegative(),
+              durationSeconds: z.number().nonnegative(),
+              coordinates: z.array(position).min(2),
+            }),
+          )
+          .optional(),
+        stops: z
+          .array(endpointSchema.extend({ code: z.string().nullish() }))
+          .optional(),
+        stopsComplete: z.boolean().optional(),
         instruction: bilingual,
         directions: z.array(bilingual).default([]),
         detail: bilingual,
@@ -387,6 +406,9 @@ export async function refreshJourney(
 
 const snapshotSchema = z
   .object({
+    guidanceProgress: z
+      .record(z.string(), z.number().int().nonnegative())
+      .optional(),
     schemaVersion: z.literal(1),
     profile: travelProfileSchema.optional(),
     journey: journeySchema,

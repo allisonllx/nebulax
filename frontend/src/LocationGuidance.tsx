@@ -1,3 +1,4 @@
+import { stepGuidance } from "./stepGuidance";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, MapPin, Volume2 } from "lucide-react";
 import type { Journey, Language } from "./journey";
@@ -5,7 +6,7 @@ import type { Journey, Language } from "./journey";
 type Fix = { lat: number; lon: number; accuracy: number; timestamp: number };
 type Point = [number, number];
 // Local metre projection is sufficient for short Singapore walking legs.
-function distanceToRoute(fix: Fix, coordinates: Point[]) {
+function distanceToRoute(fix: Fix, coordinates: Point[], boarding = false) {
   const scaleX = 111320 * Math.cos((fix.lat * Math.PI) / 180);
   const project = ([lon, lat]: Point) => [
     (lon - fix.lon) * scaleX,
@@ -26,7 +27,7 @@ function distanceToRoute(fix: Fix, coordinates: Point[]) {
       Math.hypot(ax + fraction * dx, ay + fraction * dy),
     );
   }
-  const end = coordinates.at(-1);
+  const end = boarding ? coordinates[0] : coordinates.at(-1);
   return { route: nearest, end: end ? Math.hypot(...project(end)) : Infinity };
 }
 export function LocationGuidance({
@@ -54,14 +55,16 @@ export function LocationGuidance({
   enabled: boolean;
   onEnable: (enabled: boolean) => void;
   /** Reports live progress on the current leg (or null when unreliable) for spoken reminders. */
-  onStatus?: (status: {
-    endMetres: number;
-    routeMetres: number;
-    off: boolean;
-    lat: number;
-    lon: number;
-    accuracy: number;
-  } | null) => void;
+  onStatus?: (
+    status: {
+      endMetres: number;
+      routeMetres: number;
+      off: boolean;
+      lat: number;
+      lon: number;
+      accuracy: number;
+    } | null,
+  ) => void;
   /** Reverse-geocoded "he is near ..." label, resolved by the parent. */
   nearLabel?: string | null;
   /** True while the app is automatically replanning from his position. */
@@ -70,6 +73,7 @@ export function LocationGuidance({
 }) {
   const t = (en: string, zh: string) => (language === "en" ? en : zh);
   const step = journey.steps[stepIndex];
+  const guidance = stepGuidance(journey, step, language);
   // Never guess which geometry belongs to a step. Lift/platform checks stay manual.
   const leg =
     step.legId && step.mode !== "lift"
@@ -177,12 +181,16 @@ export function LocationGuidance({
     fix.accuracy >= 0 &&
     document.visibilityState === "visible";
   const distances =
-    reliable && coordinates ? distanceToRoute(fix, coordinates) : null;
+    reliable && coordinates
+      ? distanceToRoute(fix, coordinates, guidance.action === "board")
+      : null;
   const near = distances && distances.end <= 35;
   const far = distances && fix && distances.end - fix.accuracy > 80;
   const off = Boolean(away && distances);
   // Coarse-grained so the parent effect is not re-triggered by GPS jitter.
-  const endMetres = distances ? Math.max(10, Math.round(distances.end / 10) * 10) : null;
+  const endMetres = distances
+    ? Math.max(10, Math.round(distances.end / 10) * 10)
+    : null;
   const routeMetres = distances
     ? Math.max(0, Math.round(distances.route / 25) * 25)
     : null;
@@ -449,10 +457,17 @@ export function LocationGuidance({
         </div>
       )}
       <p className="arrival-hint">
-        {t(
-          "Only tap after reaching this step’s landmark:",
-          "到达此步骤的地标后再点击：",
-        )}{" "}
+        {guidance.action === "board"
+          ? t("Tap only after boarding:", "上车后再点击：")
+          : guidance.action === "ride"
+            ? t(
+                "Stay on board until your stop. Tap only after alighting:",
+                "请继续乘车，到站下车后再点击：",
+              )
+            : t(
+                "Only tap after reaching this step’s landmark:",
+                "到达此步骤的地标后再点击：",
+              )}{" "}
         <strong>{step.confirmation[language]}</strong>
       </p>
       <button
@@ -463,9 +478,16 @@ export function LocationGuidance({
           else onAdvance();
         }}
       >
-        {stepIndex === journey.steps.length - 1
-          ? t("I’m here — finish journey", "我已到达，结束行程")
-          : t("I’m here — show next step", "我已到达，查看下一步")}
+        {guidance.action === "board"
+          ? t("I’m on board — next step", "我已上车，查看下一步")
+          : guidance.action === "ride"
+            ? t(
+                `I’ve alighted at ${guidance.to ?? step.place.en} — next step`,
+                `我已在 ${guidance.to ?? step.place.zh} 下车，查看下一步`,
+              )
+            : stepIndex === journey.steps.length - 1
+              ? t("I’m here — finish journey", "我已到达，结束行程")
+              : t("I’m here — show next step", "我已到达，查看下一步")}
         <ArrowRight size={25} />
       </button>
       {confirm && (

@@ -99,8 +99,25 @@ def convert(raw: dict, *, pace_factor: float, origin: Place, destination: Place)
                 rail_segments.append((line, station_codes))
             texts = [instructions.board_train(line, from_code, to_code) if line
                      else Text(en="Take the train.", zh="搭地铁。"),
-                     instructions.alight_train(len(passed) + 1, to_name, to_code)]
+                     instructions.alight_train(len(passed) + 1, to_name, to_code) if isinstance(leg.get("intermediateStops"), list)
+                     else Text(en=f"Get off at {to_name.en}.", zh=f"在{to_name.zh}下车。") ]
 
+        from app.models import TransitStop
+        from app.services.substeps import walking_substeps
+        from_place = Place(lat=leg["from"]["lat"], lon=leg["from"]["lon"], name=from_name)
+        to_place = Place(lat=leg["to"]["lat"], lon=leg["to"]["lon"], name=to_name)
+        stops = []
+        stops_complete = mode != "walk" and isinstance(leg.get("intermediateStops"), list)
+        if mode != "walk":
+            for stop in [leg["from"], *(leg.get("intermediateStops") or []), leg["to"]]:
+                try:
+                    name, _ = _place_name(stop, origin, destination)
+                    stops.append(TransitStop(lat=stop["lat"], lon=stop["lon"], name=name, code=stop.get("stopCode")))
+                except (KeyError, ValueError, TypeError):
+                    stops_complete = False
+        substeps = walking_substeps(leg.get("_walking_detail"), coords, seconds, leg_id) if mode == "walk" else []
+        if substeps:
+            walk_directions = [s.instruction for s in substeps]
         minutes = max(round(seconds / 60), 1)
         step_ids = []
         for i, text in enumerate(texts):
@@ -117,6 +134,8 @@ def convert(raw: dict, *, pace_factor: float, origin: Place, destination: Place)
             else:
                 confirmation = Text(en=f"I have alighted at {to_name.en}", zh=f"我在{to_name.zh}下车了")
             steps.append(Step(
+                from_place=from_place, to_place=to_place, action="walk" if mode == "walk" else "board" if is_board else "ride",
+                substeps=substeps, stops=stops, stops_complete=stops_complete,
                 id=step_id, leg_id=leg_id, mode=mode, line=line, service=service, instruction=text,
                 directions=walk_directions,
                 detail=Text(en=f"{from_name.en} → {to_name.en}", zh=f"{from_name.zh} → {to_name.zh}"),
