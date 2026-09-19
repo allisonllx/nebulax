@@ -85,9 +85,9 @@ function App() {
   const [large, setLarge] = useState(() => loadSnapshot()?.large ?? true);
   const [repeatSeconds, setRepeatSeconds] = useState(() => {
     try {
-      return Number(localStorage.getItem("nebulax:repeat") ?? "60") || 60;
+      return Number(localStorage.getItem("nebulax:repeat") ?? "30") || 30;
     } catch {
-      return 60;
+      return 30;
     }
   });
   // Two audiences, one app: Mr Tan gets guidance only; family gets the fuller controls.

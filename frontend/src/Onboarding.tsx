@@ -56,7 +56,7 @@ export function Onboarding({
     initial?.walkMinutes ??
     (initial ? Math.round((1.1 - initial.paceFactor) / 0.032) : 15);
   const [walkMinutes, setWalkMinutes] = useState(initialWalkMinutes);
-  const [repeatSeconds, setRepeatSeconds] = useState(initial?.repeatSeconds ?? 60);
+  const [repeatSeconds, setRepeatSeconds] = useState(initial?.repeatSeconds ?? 30);
   const [share, setShare] = useState(initial?.shareWithFamily ?? true);
   const [familyPhone, setFamilyPhone] = useState("");
 

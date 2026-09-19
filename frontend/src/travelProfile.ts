@@ -11,7 +11,7 @@ export const travelProfileSchema = z.object({
   walkMinutes: z.number().int().min(1).max(60).optional(),
   paceFactor: z.number().min(0.1).max(1.5),
   /** How often the spoken guidance repeats en route, in seconds. 0 = only on step change. */
-  repeatSeconds: z.number().int().min(0).max(600).default(60),
+  repeatSeconds: z.number().int().min(0).max(600).default(30),
 });
 export type TravelProfile = z.infer<typeof travelProfileSchema>;
 export const defaultTravelProfile: TravelProfile = {
@@ -21,5 +21,5 @@ export const defaultTravelProfile: TravelProfile = {
   ],
   mobilityAid: "cane",
   paceFactor: 0.6,
-  repeatSeconds: 60,
+  repeatSeconds: 30,
 };
