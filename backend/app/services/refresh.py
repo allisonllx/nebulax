@@ -85,8 +85,8 @@ def evaluate(*, req: PlanRequest, raw_itineraries: list[dict], train_alerts_raw:
         summary = Text(en="A lift you need is out of service. Here is a route with no lift and no stairs.",
                        zh="您要用的电梯正在维修。这条路线不用电梯,也不用走楼梯。")
     else:
-        summary = Text(en="The platform is very crowded. Here is a calmer route with a seat.",
-                       zh="站台现在非常拥挤。这条路线更从容,而且有座位。")
+        summary = Text(en="The platform is very crowded. Here is a route that avoids that platform. Seating availability is not confirmed.",
+                       zh="站台现在非常拥挤。这条路线避开该站台，但无法确认是否有座位。")
     if "train_disruption" not in kinds:
         pass  # lift/crowd summaries above already name the reason; don't override with "MRT disrupted"
     if "train_disruption" in kinds:

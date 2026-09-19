@@ -96,6 +96,8 @@ arriving by 10:00**.
 endpoints drive everything: `POST /api/journeys/plan` and `POST /api/journeys/{id}/refresh` — full
 schema at `/docs`, examples in [`docs/fixtures/`](docs/fixtures/).
 
+For the two-button before-and-after demo (lift outage + crowded platform), see [Accessibility demo walkthrough](docs/presentation-demo.md).
+
 ## 5. Data sources
 
 | Source | Used for |

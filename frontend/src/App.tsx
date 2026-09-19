@@ -1,3 +1,4 @@
+import { PresentationDemo } from "./PresentationDemo";
 import { stepGuidance } from "./stepGuidance";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
@@ -100,6 +101,7 @@ function App() {
   });
   const [online, setOnline] = useState(navigator.onLine);
   const [simulateOffline, setSimulateOffline] = useState(false);
+  const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -620,7 +622,52 @@ function App() {
       setBusy(false);
     }
   }
-  async function refresh(scenario: Scenario = "normal") {
+  async function preparePresentation() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const date = new Date(Date.now() + 32 * 3600000)
+        .toISOString()
+        .slice(0, 10);
+      const appointment = { ...defaultAppointment, date };
+      const options = await planJourneyWithOptions({
+        ...planRequest,
+        arriveBy: appointmentInstant(appointment),
+      });
+      const rail = [options.journey, ...options.alternatives].find(
+        (candidate) => candidate.steps.some((s) => s.mode === "train"),
+      );
+      if (!rail) throw new Error("No train route available");
+      const next: Snapshot = {
+        schemaVersion: 1,
+        journey: rail,
+        stepIndex: 0,
+        phase: "planned",
+        language,
+        large,
+        blocked: false,
+        proposal: null,
+        appointment,
+        family: state?.family ?? defaultFamily,
+        progressUpdatedAt: null,
+        lostAlert: null,
+        lastDeviation: null,
+      };
+      if (!saveSnapshot(next)) throw new Error("Could not save");
+      setState(next);
+      setRouteChoices(null);
+      setRecovered(false);
+      setPreviousJourney(undefined);
+      setLiveFix(null);
+      setLocationEnabled(false);
+      setPersonaMode("elder");
+      go("journey");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function refresh(scenario: Scenario = "normal", presentation = false) {
     if (!state || offline) return;
     setBusy(true);
     setError("");
@@ -631,15 +678,61 @@ function App() {
         state.journey.steps[state.stepIndex].id,
         scenario,
       );
-      if (result.status === "replacement_available")
-        setState(
-          (previous) =>
-            previous && {
-              ...previous,
-              proposal: result.journey,
-              blocked: false,
+      if (presentation) go("journey");
+      if (result.status === "replacement_available") {
+        if (presentation) {
+          const samePlace = (
+            a: typeof state.journey.origin,
+            b: typeof state.journey.origin,
+          ) => !a || Boolean(b && a.lat === b.lat && a.lon === b.lon);
+          if (
+            !samePlace(state.journey.origin, result.journey.origin) ||
+            !samePlace(state.journey.destination, result.journey.destination)
+          )
+            throw new Error("Replacement changed the journey endpoints");
+          const next: Snapshot = {
+            ...state,
+            journey: {
+              ...result.journey,
+              routeGeometry: {
+                ...result.journey.routeGeometry,
+                features: result.journey.routeGeometry.features.filter(
+                  (feature) => feature.properties.role !== "previous",
+                ),
+              },
             },
-        );
+            phase: "planned",
+            stepIndex: 0,
+            proposal: null,
+            blocked: false,
+            guidanceProgress: {},
+            language,
+            large,
+          };
+          if (!saveSnapshot(next))
+            throw new Error("Could not save updated route");
+          setState(next);
+          setPersonaMode("elder");
+          setRecovered(false);
+          setPreviousJourney(undefined);
+          setLiveFix(null);
+          setLocationEnabled(false);
+          setNotice(
+            t(
+              "Route updated to avoid the crowded platform and the lift under maintenance.",
+              "路线已更新：避开拥挤站台和维修中的电梯。",
+            ),
+          );
+        } else
+          setState(
+            (previous) =>
+              previous && {
+                ...previous,
+                proposal: result.journey,
+                blocked: false,
+              },
+          );
+      }
       if (result.status === "no_accessible_route")
         setState(
           (previous) =>
@@ -652,15 +745,33 @@ function App() {
               ...previous,
               blocked: false,
               proposal: null,
-              journey: { ...previous.journey, updatedAt: result.checkedAt },
+              journey: {
+                ...previous.journey,
+                updatedAt: result.checkedAt,
+                ...(result.alerts ? { alerts: result.alerts } : {}),
+              },
             },
         );
         setNotice(
-          t("No further changes in this scenario.", "此情景暂无其他变化。"),
+          result.dataFreshness === "unknown"
+            ? t(
+                "Some condition data is unavailable. We cannot confirm that the route is clear.",
+                "部分路况资料暂不可用，无法确认路线没有问题。",
+              )
+            : presentation
+              ? t(
+                  "No replacement was suggested for this route. For the demo, prepare a fresh train journey before applying the scenario.",
+                  "此路线没有建议的替代方案。演示时，请先准备新的地铁行程，再启用情景。",
+                )
+              : t(
+                  "No route changes found in the available condition data.",
+                  "可用路况资料中未发现路线变化。",
+                ),
         );
       }
-    } catch {
+    } catch (cause) {
       setError("refresh");
+      if (presentation) throw cause;
     } finally {
       setBusy(false);
     }
@@ -849,6 +960,27 @@ function App() {
             )}
           </button>
         </nav>
+      )}
+      {(activeScenario ||
+        journey?.dataMode === "simulated" ||
+        state?.proposal?.dataMode === "simulated" ||
+        simulateOffline) && (
+        <div className="simulation-banner" role="status">
+          {simulateOffline
+            ? t(
+                "Offline simulation · saved guidance only",
+                "离线模拟 · 仅使用已保存指引",
+              )
+            : activeScenario
+              ? t(
+                  `SIMULATED CONDITIONS · ${activeScenario}`,
+                  `模拟状况 · ${activeScenario}`,
+                )
+              : t(
+                  "Saved route uses simulated conditions",
+                  "保存的路线使用了模拟状况",
+                )}
+        </div>
       )}
       <main id="main" className="main-shell">
         {back}
@@ -1261,9 +1393,21 @@ function App() {
                   <section className="card comparison-card">
                     <div className="icon-heading">
                       <TriangleAlert />
-                      <h2>{t("Walking approach changed", "步行路线有变化")}</h2>
+                      <h2>
+                        {state.proposal.summary?.[language] ??
+                          t("Your route needs to change", "您的路线需要调整")}
+                      </h2>
                     </div>
-                    <p>{state.proposal.alerts[0]?.message[language]}</p>
+                    {state.proposal.alerts.map((alert) => (
+                      <p key={alert.id}>{alert.message[language]}</p>
+                    ))}
+                    {state.proposal.reasons?.length ? (
+                      <ul>
+                        {state.proposal.reasons.map((reason, i) => (
+                          <li key={i}>{reason[language]}</li>
+                        ))}
+                      </ul>
+                    ) : null}
                     <div className="comparison-times">
                       <div>
                         <span>{t("Original arrival", "原预计到达")}</span>
@@ -1279,8 +1423,8 @@ function App() {
                       <Clock3 size={22} />
                       <p>
                         {t(
-                          `8 more minutes in this demo. Appointment: ${time(appointmentInstant(state.appointment))}.`,
-                          `此演示增加8分钟。预约时间：${time(appointmentInstant(state.appointment))}。`,
+                          `Appointment: ${time(appointmentInstant(state.appointment))}. Compare the arrival estimates above.`,
+                          `预约时间：${time(appointmentInstant(state.appointment))}。请比较上方的预计到达时间。`,
                         )}
                       </p>
                     </div>
@@ -1597,6 +1741,19 @@ function App() {
               </>
             )}
           </>
+        )}
+        {!isDemo && (
+          <PresentationDemo
+            language={language}
+            busy={busy}
+            offline={offline}
+            simulatedOffline={simulateOffline}
+            hasJourney={Boolean(state)}
+            onOffline={() => setSimulateOffline((value) => !value)}
+            onPrepare={preparePresentation}
+            onCheck={() => refresh("normal", true)}
+            onActive={setActiveScenario}
+          />
         )}
         {isDemo && state && (
           <details className="demo-controls">

@@ -101,6 +101,33 @@ export function ElderHome({
               : "Your route is ready. Walk at your own pace."}
         </p>
       </div>
+      <section
+        className="home-route-preview"
+        aria-label={zh ? "规划路线" : "Planned route"}
+      >
+        <p className="home-route-endpoints">
+          {journey.origin?.name[language] ?? (zh ? "家" : "Home")} →{" "}
+          {destination}
+        </p>
+        <p>
+          <strong>
+            {zh ? "预计到达" : "Estimated arrival"}: {arrival(journey)}
+          </strong>
+        </p>
+        {journey.summary && <p>{journey.summary[language]}</p>}
+        <ol className="home-route-rides">
+          {journey.steps
+            .filter(
+              (s) =>
+                (s.mode === "bus" || s.mode === "train") &&
+                stepGuidance(journey, s, language).action !== "ride",
+            )
+            .map((s) => (
+              <li key={s.id}>{s.instruction[language]}</li>
+            ))}
+        </ol>
+        <LiveMap journey={journey} language={language} density="elder" />
+      </section>
       <button className="calm-primary" disabled={disabled} onClick={onStart}>
         <ArrowRight />
         {zh ? "开始行程" : "Start journey"}

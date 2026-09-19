@@ -5,6 +5,7 @@ export default defineConfig({
     "profile-guidance.spec.ts",
     "calm-ui.spec.ts",
     "substeps.spec.ts",
+    "presentation-demo.spec.ts",
   ],
   fullyParallel: true,
   use: {

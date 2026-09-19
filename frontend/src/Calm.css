@@ -746,3 +746,85 @@
   white-space: nowrap;
   line-height: 1.2;
 }
+
+.presentation-demo {
+  margin: 32px 0 16px;
+  padding: 20px;
+  border: 1px solid #bfcdbc;
+  border-radius: 16px;
+  font-size: 16px;
+  background: #f2f5ee;
+}
+.presentation-demo summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 18px;
+}
+.presentation-demo p,
+.presentation-demo ol {
+  margin: 14px 0;
+  line-height: 1.5;
+}
+.presentation-demo label {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  font-weight: 600;
+}
+.presentation-demo select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 12px;
+  font: inherit;
+  background: white;
+  border: 1px solid #7f9484;
+  border-radius: 8px;
+}
+.presentation-demo button {
+  font-size: 16px;
+  white-space: normal;
+}
+.simulation-banner {
+  padding: 12px 20px;
+  background: #fff1cd;
+  color: #66450b;
+  font-weight: 700;
+  text-align: center;
+}
+
+.presentation-demo .scenario-buttons .primary {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+}
+.presentation-demo .scenario-buttons .primary:hover:not(:disabled) {
+  background: #193e2d;
+}
+
+.home-route-preview {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.home-route-endpoints {
+  overflow-wrap: anywhere;
+  color: #345447;
+}
+.home-route-rides {
+  margin: 0;
+  padding-left: 1.3em;
+}
+.home-route-rides:empty {
+  display: none;
+}
+.presentation-demo > .scenario-buttons {
+  flex-direction: column;
+}
+.presentation-demo > details {
+  margin-top: 16px;
+}
+.presentation-demo > details > summary {
+  font-size: 15px;
+  font-weight: 500;
+}

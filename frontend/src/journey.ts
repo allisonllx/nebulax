@@ -24,6 +24,7 @@ const geometry = z.object({
         mode: z.enum(["walk", "train", "bus"]),
         affected: z.boolean().optional(),
         legId: z.string().optional(),
+        role: z.string().optional(),
       }),
       geometry: z.object({
         type: z.literal("LineString"),
@@ -44,6 +45,9 @@ export const journeySchema = z.object({
   destination: endpointSchema.nullish(),
   version: z.number().int().positive(),
   status: z.literal("ready"),
+  dataMode: z.enum(["live", "simulated"]).optional(),
+  summary: bilingual.optional(),
+  reasons: z.array(bilingual).optional(),
   updatedAt: z.string().datetime({ offset: true }),
   departureTime: z.string().datetime({ offset: true }),
   arrivalWindow: z.object({
@@ -95,6 +99,10 @@ export const refreshSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("unchanged"),
     checkedAt: z.string().datetime({ offset: true }),
+    dataFreshness: z.enum(["fresh", "unknown"]).optional(),
+    alerts: z
+      .array(z.object({ id: z.string(), message: bilingual }))
+      .optional(),
   }),
   z.object({
     status: z.literal("replacement_available"),
