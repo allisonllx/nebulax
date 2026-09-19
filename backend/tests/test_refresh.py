@@ -88,6 +88,13 @@ def test_replacement_warnings_describe_the_replacement_not_the_old_route(transit
         facilities_raw=novena_lift,
     )
 
-    # The recommended bus route never enters Novena MRT station, so no lift warning belongs on it.
+    # The bus route itself never enters Novena MRT station, so its own step-free status is clean...
     assert out.result == "replacement_available"
-    assert all(a.type != "lift_maintenance" for a in out.journey.alerts)
+    from app.services import conditions
+    from app.services.itinerary import convert
+    bus_plan = min((convert(r, pace_factor=0.6, origin=SAVED_PLACES["saved-home"],
+                            destination=SAVED_PLACES["ttsh-entrance"])
+                    for r in bus_itineraries), key=lambda p: p.transfers)
+    assert conditions.lift_alerts_for(bus_plan, novena_lift, data_source="simulated") == []
+    # ...but the lift outage is carried as a reason the route was changed, which is correct.
+    assert any(a.type == "lift_maintenance" for a in out.journey.alerts)

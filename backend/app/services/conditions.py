@@ -68,10 +68,14 @@ def lift_alerts_for(plan: CandidatePlan, raw: dict, *, data_source: DataSource) 
                 en=f"A lift at {station.en} ({code}) is under maintenance right now: "
                    f"{(row.get('LiftDesc') or '').strip()}.",
                 zh=f"{station.zh}({code})有一部电梯正在维修。请留意站内指示。")
+        # Name the rail leg this outage threatens: with no verified step-free exit, the app can
+        # offer a route that needs no lift at all instead of only warning him.
+        line = canonical_line(row.get("Line"))
+        leg_ids = plan.leg_ids_on(line, {code}) if line else []
         alerts.append(Alert(
-            id=f"lift-{code}-{n}", type="lift_maintenance", severity="minor", planned=False,
-            message=message, line=canonical_line(row.get("Line")), station_codes=[code],
-            affects_journey=True, affected_leg_ids=[],
+            id=f"lift-{code}-{n}", type="lift_maintenance", severity="major", planned=False,
+            message=message, line=line, station_codes=[code],
+            affects_journey=True, affected_leg_ids=leg_ids,
             source="LTA FacilitiesMaintenance", data_source=data_source,
         ))
     return alerts
@@ -138,4 +142,38 @@ def train_alerts_for(plan: CandidatePlan, raw: dict, *, data_source: DataSource)
             affects_journey=True, affected_leg_ids=leg_ids,
             source="LTA TrainServiceAlerts", data_source=data_source, source_updated_at=updated,
         ))
+    return alerts
+
+
+_CROWD_WORDS = {"h": Text(en="very crowded", zh="非常拥挤")}
+
+
+def crowd_alerts_for(plan: CandidatePlan, raw_by_line: dict[str, dict | None], *,
+                     data_source: DataSource) -> list[Alert]:
+    """Station crowd density -> alerts for the platforms he actually boards from or leaves at.
+
+    Only those two matter: he rides through the rest without standing on their platforms. A
+    crowded platform is not a delay for him, it is a place he cannot safely wait.
+    """
+    alerts: list[Alert] = []
+    for line, stations in plan.rail_segments:
+        raw = raw_by_line.get(line)
+        if not raw or not stations:
+            continue
+        levels = {(row.get("Station") or "").upper(): (row.get("CrowdLevel") or "").lower()
+                  for row in raw.get("value", []) or []}
+        for code in dict.fromkeys([stations[0], stations[-1]]):
+            if levels.get(code.upper()) != "h":
+                continue
+            station = station_name(code, code)
+            alerts.append(Alert(
+                id=f"crowd-{line}-{code}", type="crowding", severity="major", planned=False,
+                message=Text(
+                    en=f"{station.en} ({code}) is very crowded right now — there may be no room to "
+                       f"stand comfortably or wait safely.",
+                    zh=f"{station.zh}({code})现在非常拥挤，可能没有地方可以稳稳站着或安心等候。"),
+                line=line, station_codes=[code],
+                affects_journey=True, affected_leg_ids=plan.leg_ids_on(line, {code}),
+                source="LTA Station Crowd Density (real-time)", data_source=data_source,
+            ))
     return alerts

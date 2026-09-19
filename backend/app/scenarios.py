@@ -38,6 +38,13 @@ HEAVY_RAIN = {"data": {
 }}
 
 
+CROWDED_NSL = {"value": [
+    {"Station": "NS16", "StartTime": "2026-09-21T08:30:00+08:00", "CrowdLevel": "h"},
+    {"Station": "NS17", "StartTime": "2026-09-21T08:30:00+08:00", "CrowdLevel": "h"},
+    {"Station": "NS20", "StartTime": "2026-09-21T08:30:00+08:00", "CrowdLevel": "m"},
+]}
+
+
 @dataclass
 class Scenario:
     name: str
@@ -46,6 +53,7 @@ class Scenario:
     train_alerts: dict | None = None
     facilities: dict | None = None
     weather: dict | None = None
+    crowd: dict | None = None
 
 
 SCENARIO_DEFS = {
@@ -64,10 +72,24 @@ SCENARIO_DEFS = {
         title=Text(en="Heavy rain over the route (simulated)", zh="路线沿途大雨(模拟)"),
         weather=HEAVY_RAIN,
     ),
+    "crowded_platform": Scenario(
+        name="crowded_platform",
+        title=Text(en="Ang Mo Kio platform very crowded (simulated)", zh="宏茂桥站台非常拥挤(模拟)"),
+        crowd={"NSL": CROWDED_NSL},
+    ),
+    # The scenario that is specific to this traveller: a broken lift and a packed platform are
+    # inconveniences for most commuters, but they are showstoppers for him.
+    "hard_for_him": Scenario(
+        name="hard_for_him",
+        title=Text(en="Lift out of service + crowded platform (simulated)",
+                   zh="电梯维修 + 站台拥挤(模拟)"),
+        facilities=NOVENA_LIFT_OUT, crowd={"NSL": CROWDED_NSL},
+    ),
     "bad_day": Scenario(  # everything at once — the "worst morning" demo
         name="bad_day",
         title=Text(en="Disruption + lift outage + rain (simulated)", zh="故障+电梯维修+大雨(模拟)"),
         train_alerts=NSL_DISRUPTION, facilities=NOVENA_LIFT_OUT, weather=HEAVY_RAIN,
+        crowd={"NSL": CROWDED_NSL},
     ),
 }
 

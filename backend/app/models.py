@@ -65,7 +65,7 @@ class Step(ApiModel):
 
 class Alert(ApiModel):
     id: str
-    type: Literal["train_disruption", "lift_maintenance", "bus_diversion", "weather"]
+    type: Literal["train_disruption", "lift_maintenance", "bus_diversion", "weather", "crowding"]
     severity: Literal["minor", "major"]
     planned: bool
     message: Text

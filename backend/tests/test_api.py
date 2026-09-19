@@ -104,19 +104,18 @@ def test_a_dead_feed_reports_unknown_freshness(client, monkeypatch):
     assert r.json()["dataFreshness"] == "unknown"
 
 
-def test_refresh_unchanged_still_reports_lift_and_rain_warnings(client, monkeypatch):
+def test_a_lift_outage_at_his_station_proposes_a_lift_free_route(client, monkeypatch):
     trip = client.post("/api/journeys/plan", json=PLAN_BODY).json()
 
     assert client.post("/api/scenarios/novena_lift_out/activate").status_code == 200
     r = client.post(f"/api/journeys/{trip['id']}/refresh", json={"version": trip["version"]})
 
     body = r.json()
-    assert body["result"] == "unchanged"           # route itself is still fine
-    types = {a["type"] for a in body["alerts"]}
+    # A lift he needs being out is a showstopper for him, so the app changes the route.
+    assert body["result"] == "replacement_available"
+    assert all(s["mode"] != "train" for s in body["journey"]["steps"])
+    types = {a["type"] for a in body["journey"]["alerts"]}
     assert "lift_maintenance" in types
-    lift = next(a for a in body["alerts"] if a["type"] == "lift_maintenance")
-    assert lift["dataSource"] == "simulated"
-    assert "Exit A" in lift["message"]["en"]
 
 
 def test_plan_attaches_current_warnings_to_the_journey(client):

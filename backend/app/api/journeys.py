@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException
 
 from app import config
-from app.clients.datamall import facilities_maintenance, train_service_alerts
+from app.clients.datamall import facilities_maintenance, platform_crowd, train_service_alerts
 from app.clients.onemap import OneMapClient
 from app.clients.weather import two_hour_forecast
 from app.models import Journey, Place, PlacePin, PlanRequest, RefreshRequest, RefreshResponse
@@ -67,6 +67,23 @@ async def _feeds():
             await fetch(None, two_hour_forecast), "live")
 
 
+async def _crowd_for(stored, origin, destination) -> dict[str, dict | None]:
+    """Real-time crowd density for the lines this journey actually rides (one call per line)."""
+    scenario = SCENARIOS.scenario
+    if scenario is not None and scenario.crowd is not None:
+        return scenario.crowd
+    lines = {line for raw in stored.raw_itineraries
+             for line, _ in convert(raw, pace_factor=stored.request.walking_speed_factor,
+                                    origin=origin, destination=destination).rail_segments}
+    out: dict[str, dict | None] = {}
+    for line in lines:
+        try:
+            out[line] = await platform_crowd(line)
+        except Exception:
+            out[line] = None  # unknown, never "not crowded"
+    return out
+
+
 @router.post("/journeys/plan", response_model=Journey, response_model_by_alias=True)
 async def plan(req: PlanRequest) -> Journey:
     origin, destination = _places(req)
@@ -117,12 +134,13 @@ async def refresh_journey(journey_id: str, body: RefreshRequest) -> RefreshRespo
     origin, destination = _places(stored.request)
 
     train_raw, lifts_raw, weather_raw, source = await _feeds()
+    crowd_raw = await _crowd_for(stored, origin, destination)
     out = refresh.evaluate(req=stored.request, raw_itineraries=stored.raw_itineraries,
                            train_alerts_raw=train_raw, alerts_data_source=source,
                            origin=origin, destination=destination,
                            journey_id=journey_id, current_version=stored.version, now=_now(),
                            facilities_raw=lifts_raw, weather_raw=weather_raw,
-                           chosen_index=stored.chosen_index)
+                           crowd_raw=crowd_raw, chosen_index=stored.chosen_index)
     if out.journey is not None:
         STORE.bump_version(journey_id, out.journey.version)
     return out

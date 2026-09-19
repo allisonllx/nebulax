@@ -24,3 +24,14 @@ async def facilities_maintenance() -> dict:
         r = await http.get(f"{BASE}/v2/FacilitiesMaintenance")
         r.raise_for_status()
         return r.json()
+
+
+async def platform_crowd(line: str) -> dict:
+    """Station Crowd Density (Real-Time) for one train line: l / m / h per station."""
+    key = config.env("LTA_DATAMALL_ACCOUNT_KEY")
+    if not key:
+        raise RuntimeError("LTA_DATAMALL_ACCOUNT_KEY not set")
+    async with httpx.AsyncClient(timeout=30, headers={"AccountKey": key, "accept": "application/json"}) as http:
+        r = await http.get(f"{BASE}/PCDRealTime", params={"TrainLine": line})
+        r.raise_for_status()
+        return r.json()
