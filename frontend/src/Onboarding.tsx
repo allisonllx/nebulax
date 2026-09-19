@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, HeartHandshake } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, HeartHandshake } from "lucide-react";
 import type { Language } from "./journey";
 
 import { PlaceField } from "./PlaceField";
@@ -71,15 +71,21 @@ export function Onboarding({
       aria-pressed={active}
       onClick={onClick}
     >
-      <span>{label}</span>
-      {hint && <small>{hint}</small>}
+      <span className="onboarding-choice-copy">
+        <span>{label}</span>
+        {hint && <small>{hint}</small>}
+      </span>
+      <span className="onboarding-choice-mark" aria-hidden="true">
+        {active && <Check size={20} strokeWidth={2.5} />}
+      </span>
     </button>
   );
 
   const stages = [
     // 0 — welcome, addressed to the daughter
     <section key="w" className="onboarding-card">
-      <HeartHandshake size={44} className="onboarding-icon" />
+      <header className="onboarding-question">
+      <HeartHandshake size={36} className="onboarding-icon" aria-hidden="true" />
       <span className="eyebrow">{t("SET UP TOGETHER", "一起完成设置")}</span>
       <h1>
         {t(
@@ -87,6 +93,7 @@ export function Onboarding({
           "美玲，请和爸爸一起回答几个问题",
         )}
       </h1>
+      </header>
       <p>
         {t(
           "Five quick questions. The answers shape every route we plan for him.",
@@ -113,6 +120,7 @@ export function Onboarding({
       </button>
     </section>,
     <section key="places" className="onboarding-card">
+      <header className="onboarding-question">
       <span className="eyebrow">
         {t("QUESTION 1 OF 5", "第 1 题，共 5 题")}
       </span>
@@ -122,6 +130,7 @@ export function Onboarding({
           "爸爸住在哪里，平时常去哪里？",
         )}
       </h1>
+      </header>
       <p>
         {t(
           "Mei Ling, save his home and familiar destinations. Choose a search result to confirm each address.",
@@ -191,10 +200,12 @@ export function Onboarding({
     </section>,
     // 1 — mobility aid
     <section key="q1" className="onboarding-card">
+      <header className="onboarding-question">
       <span className="eyebrow">
         {t("QUESTION 2 OF 5", "第 2 题，共 5 题")}
       </span>
       <h1>{t("What does he use when going out?", "爸爸出门时用什么辅助？")}</h1>
+      </header>
       {choice(
         mobilityAid === "none",
         () => setMobilityAid("none"),
@@ -219,6 +230,7 @@ export function Onboarding({
     </section>,
     // 2 — pace, asked as a fact he knows
     <section key="q2" className="onboarding-card">
+      <header className="onboarding-question">
       <span className="eyebrow">
         {t("QUESTION 3 OF 5", "第 3 题，共 5 题")}
       </span>
@@ -228,6 +240,7 @@ export function Onboarding({
           "爸爸从家走到最近的车站，平时要多久？",
         )}
       </h1>
+      </header>
       {WALK_PRESETS.map((m) =>
         choice(
           walkMinutes === m,
@@ -267,12 +280,14 @@ export function Onboarding({
     </section>,
     // 3 — how instructions are given
     <section key="q3" className="onboarding-card">
+      <header className="onboarding-question">
       <span className="eyebrow">
         {t("QUESTION 4 OF 5", "第 4 题，共 5 题")}
       </span>
       <h1>
         {t("How should instructions reach him?", "路上的指引怎么给爸爸？")}
       </h1>
+      </header>
       {choice(
         voice === "text",
         () => setVoice("text"),
@@ -291,6 +306,7 @@ export function Onboarding({
     </section>,
     // 4 — consent, phrased as his choice
     <section key="q4" className="onboarding-card">
+      <header className="onboarding-question">
       <span className="eyebrow">
         {t("QUESTION 5 OF 5", "第 5 题，共 5 题")}
       </span>
@@ -300,6 +316,7 @@ export function Onboarding({
           "陈伯——让美玲看到您走到哪一步了，好吗？",
         )}
       </h1>
+      </header>
       {choice(
         share,
         () => setShare(true),
@@ -376,6 +393,16 @@ export function Onboarding({
           <ArrowLeft size={20} />
           {t("Back", "上一题")}
         </button>
+      )}
+      {stage > 0 && (
+        <div className="onboarding-progress" role="progressbar"
+          aria-label={t("Setup progress", "设置进度")}
+          aria-valuemin={0} aria-valuemax={5} aria-valuenow={stage}
+          aria-valuetext={t(`Question ${stage} of 5`, `第 ${stage} 题，共 5 题`)}>
+          {[1, 2, 3, 4, 5].map((step) => (
+            <span key={step} className={step <= stage ? "is-reached" : ""} />
+          ))}
+        </div>
       )}
       {stages[stage]}
       {stage > 0 && stage < 5 && (

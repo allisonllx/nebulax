@@ -592,7 +592,7 @@ function App() {
           </button>
         </nav>
       )}
-      <main id="main" className="main-shell">
+      <main id="main" className={`main-shell${state?.phase === "planned" && view === "journey" && personaMode === "elder" ? " journey-home" : ""}`}>
         {back}
         {state?.phase === "active" && view === "journey" && (
           <nav
@@ -1249,7 +1249,7 @@ function App() {
                       ) : (
                         <>
                           {t("Good morning,", "早上好，")}
-                          <br />
+                          <br />{language === "en" ? " " : ""}
                           {t("Mr Tan.", "陈先生。")}
                         </>
                       )}
