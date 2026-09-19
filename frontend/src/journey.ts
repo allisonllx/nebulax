@@ -399,6 +399,17 @@ const snapshotSchema = z
     appointment: appointmentSchema.default(defaultAppointment),
     family: familySchema.default(defaultFamily),
     progressUpdatedAt: z.string().datetime().nullable().default(null),
+    // Set while GPS shows him far off the planned route; the family view raises it as an alert.
+    lostAlert: z
+      .object({
+        lat: z.number(),
+        lon: z.number(),
+        near: z.string().nullable(),
+        routeMetres: z.number(),
+        at: z.string().datetime(),
+      })
+      .nullable()
+      .default(null),
   })
   .refine((value) => value.stepIndex < value.journey.steps.length);
 export type Snapshot = z.infer<typeof snapshotSchema>;

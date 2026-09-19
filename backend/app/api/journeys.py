@@ -23,6 +23,7 @@ _onemap = OneMapClient()
 # Module-level indirection so tests (and later a poller/cache) can substitute the feeds.
 route_candidates = _onemap.route_candidates
 geocode_search = _onemap.search
+reverse_geocode = _onemap.reverse_geocode
 
 
 def _now() -> datetime:
@@ -145,6 +146,29 @@ async def geocode(q: str):
         except (KeyError, ValueError):
             continue
     return {"results": results}
+
+
+@router.get("/revgeocode")
+async def revgeocode(lat: float, lon: float):
+    """Name the nearest place for a coordinate — 'where am I' for the lost-elder flow."""
+    try:
+        rows = await reverse_geocode(lat, lon)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Reverse geocoding unavailable: {e}") from e
+
+    def clean(value):
+        value = (value or "").strip()
+        return "" if value.lower() == "null" else value
+
+    for row in rows:
+        building = clean(row.get("BUILDINGNAME"))
+        if building:
+            return {"name": building.title()}
+    for row in rows:
+        block, road = clean(row.get("BLOCK")), clean(row.get("ROAD"))
+        if road:
+            return {"name": (f"Blk {block} " if block else "") + road.title()}
+    return {"name": None}
 
 
 @router.get("/scenarios")

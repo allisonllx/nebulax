@@ -113,8 +113,25 @@ function App() {
     options: import("./journey").Journey[];
   } | null>(null);
   const stateRef = useRef(state);
-  // Latest GPS progress on the current leg, for location-aware spoken reminders.
-  const locationStatusRef = useRef<{ endMetres: number; off: boolean; at: number } | null>(null);
+  // Latest GPS progress on the current leg: a ref for speech ticks, state for the map and UI.
+  type LiveFix = {
+    endMetres: number;
+    routeMetres: number;
+    off: boolean;
+    lat: number;
+    lon: number;
+    accuracy: number;
+    at: number;
+  };
+  const locationStatusRef = useRef<LiveFix | null>(null);
+  const [liveFix, setLiveFix] = useState<LiveFix | null>(null);
+  // Reverse-geocoded "he is near ..." label; refetched only after meaningful movement.
+  const [nearLabel, setNearLabel] = useState<string | null>(null);
+  const nearFetchRef = useRef<{ lat: number; lon: number } | null>(null);
+  const lostWriteRef = useRef(0);
+  const offSinceRef = useRef(0);
+  const lastAutoReplanRef = useRef(0);
+  const [replanBusy, setReplanBusy] = useState(false);
   useLayoutEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -263,6 +280,7 @@ function App() {
         consentedAt: answers.shareWithFamily ? new Date().toISOString() : null,
       },
       progressUpdatedAt: null,
+      lostAlert: null,
     });
     setRouteChoices(null);
     setPersonaMode("elder");
@@ -277,6 +295,138 @@ function App() {
       ? [{ ...journey.destination, name: journey.destination.name[language] }]
       : defaultTravelProfile.destinations,
   };
+  function handleLiveFix(
+    status: {
+      endMetres: number;
+      routeMetres: number;
+      off: boolean;
+      lat: number;
+      lon: number;
+      accuracy: number;
+    } | null,
+  ) {
+    const fix = status ? { ...status, at: Date.now() } : null;
+    locationStatusRef.current = fix;
+    setLiveFix(fix);
+    if (!fix) return;
+    // Name where he is, refreshed only after ~60 m of movement.
+    const last = nearFetchRef.current;
+    const moved =
+      !last ||
+      Math.hypot(
+        (fix.lat - last.lat) * 111320,
+        (fix.lon - last.lon) * 111320 * Math.cos((fix.lat * Math.PI) / 180),
+      ) > 60;
+    if (moved && !offline) {
+      nearFetchRef.current = { lat: fix.lat, lon: fix.lon };
+      fetch(`/api/revgeocode?lat=${fix.lat}&lon=${fix.lon}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body: { name?: string | null } | null) => {
+          if (body && body.name !== undefined) setNearLabel(body.name);
+        })
+        .catch(() => {});
+    }
+    // Far off the planned route = possibly lost: raise (or refresh) the family alert.
+    // It stays until the family dismisses it — wandering is itself the signal.
+    const current = stateRef.current;
+    if (!current) return;
+    if (fix.off && fix.routeMetres >= 300 && Date.now() - lostWriteRef.current >= 30000) {
+      lostWriteRef.current = Date.now();
+      setState({
+        ...current,
+        lostAlert: {
+          lat: fix.lat,
+          lon: fix.lon,
+          near: nearLabel,
+          routeMetres: fix.routeMetres,
+          at: new Date().toISOString(),
+        },
+      });
+    }
+    // He should never have to fix a wrong turn himself: after a sustained deviation,
+    // replan the rest of the journey from where he actually is.
+    if (fix.off) {
+      if (!offSinceRef.current) offSinceRef.current = Date.now();
+      const sustained = Date.now() - offSinceRef.current >= 15000;
+      const cooledDown = Date.now() - lastAutoReplanRef.current >= 60000;
+      if (sustained && cooledDown && !replanBusy && !offline) {
+        lastAutoReplanRef.current = Date.now();
+        void replanFromHere();
+      }
+    } else {
+      offSinceRef.current = 0;
+    }
+  }
+  /** Off-route recovery: replan the remaining journey from where he actually is. */
+  async function replanFromHere() {
+    const current = stateRef.current;
+    const fix = locationStatusRef.current;
+    if (!current || !fix || replanBusy) return;
+    setReplanBusy(true);
+    try {
+      const destination = current.journey.destination
+        ? {
+            lat: current.journey.destination.lat,
+            lon: current.journey.destination.lon,
+            name: current.journey.destination.name.en,
+          }
+        : (current.profile ?? defaultTravelProfile).destinations[0];
+      const sgt = new Date(Date.now() + 8 * 3600_000 + 60 * 60_000);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const arriveBy =
+        `${sgt.getUTCFullYear()}-${pad(sgt.getUTCMonth() + 1)}-${pad(sgt.getUTCDate())}` +
+        `T${pad(sgt.getUTCHours())}:${pad(sgt.getUTCMinutes())}:00+08:00`;
+      const pace = (current.profile ?? defaultTravelProfile).paceFactor;
+      const aidMargin =
+        (current.profile ?? defaultTravelProfile).mobilityAid === "walker"
+          ? 0.9
+          : 1;
+      const { journey: replanned } = await planJourneyWithOptions({
+        origin: {
+          lat: fix.lat,
+          lon: fix.lon,
+          name: nearLabel ?? t("Your location", "您的位置"),
+        },
+        destination,
+        arriveBy,
+        stepFree: true,
+        walkingSpeedFactor: pace * aidMargin,
+      });
+      setState({
+        ...current,
+        journey: replanned,
+        stepIndex: 0,
+        phase: "active",
+        blocked: false,
+        proposal: null,
+        lostAlert: null,
+        progressUpdatedAt: new Date().toISOString(),
+      });
+      offSinceRef.current = 0;
+      setNotice(
+        t(
+          "New route planned from where you are.",
+          "已从您现在的位置重新规划路线。",
+        ),
+      );
+      if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(
+          t(
+            "You went a little off the route. I have replanned it from where you are — listen for the new directions.",
+            "您刚才走偏了一点。已从您现在的位置重新规划路线，请听新的指引。",
+          ),
+        );
+        utterance.lang = language === "en" ? "en-SG" : "zh-CN";
+        utterance.rate = 0.85;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch {
+      setError("load");
+    } finally {
+      setReplanBusy(false);
+    }
+  }
   function saveProfile(answers: SetupAnswers) {
     if (!state) return;
     setRepeatSeconds(answers.repeatSeconds);
@@ -344,6 +494,7 @@ function App() {
         appointment: state?.appointment ?? defaultAppointment,
         family: state?.family ?? defaultFamily,
         progressUpdatedAt: null,
+        lostAlert: state?.lostAlert ?? null,
       });
     } catch {
       setError("load");
@@ -798,6 +949,44 @@ function App() {
                         )
                       : t("Dad has not left yet.", "爸爸还没出发。")}
                 </h1>
+                {state.lostAlert &&
+                  state.family.linked &&
+                  state.family.scopes.tripUpdates && (
+                    <div className="lost-alert" role="alert">
+                      <strong>
+                        {t(
+                          "Dad may have wandered off his route",
+                          "爸爸可能走失了",
+                        )}
+                      </strong>
+                      <p>
+                        {t(
+                          `He was about ${state.lostAlert.routeMetres} m away from the planned route` +
+                            (state.lostAlert.near
+                              ? `, near ${state.lostAlert.near}.`
+                              : ".") +
+                            " His position is marked on the map below. The app has replanned his guidance from where he is.",
+                          `他偏离规划路线约 ${state.lostAlert.routeMetres} 米` +
+                            (state.lostAlert.near
+                              ? `，位置在 ${state.lostAlert.near} 附近。`
+                              : "。") +
+                            "下方地图已标出他的位置，App 已从他所在的位置重新规划指引。",
+                        )}
+                      </p>
+                      <small>
+                        {t(
+                          `Last update ${time(state.lostAlert.at)}. If you cannot reach him, consider calling for help.`,
+                          `最后更新 ${time(state.lostAlert.at)}。若联系不上他，请考虑求助。`,
+                        )}
+                      </small>
+                      <button
+                        className="secondary"
+                        onClick={() => setState({ ...state, lostAlert: null })}
+                      >
+                        {t("I have checked on him — dismiss", "我已确认他的情况，解除警报")}
+                      </button>
+                    </div>
+                  )}
                 {state.family.linked && state.family.scopes.tripUpdates ? (
                   <>
                     <div className="caregiver-status card">
@@ -857,7 +1046,16 @@ function App() {
                             )}
                       </small>
                     </div>
-                    <LiveMap journey={journey} language={language} />
+                    <LiveMap
+                      journey={journey}
+                      language={language}
+                      position={
+                        liveFix ??
+                        (state.lostAlert
+                          ? { lat: state.lostAlert.lat, lon: state.lostAlert.lon }
+                          : null)
+                      }
+                    />
                   </>
                 ) : (
                   <div className="caregiver-status card">
@@ -1641,11 +1839,9 @@ function App() {
                           onAdvance={advance}
                           onHelp={() => go("help")}
                           voice={true}
-                          onStatus={(status) => {
-                            locationStatusRef.current = status
-                              ? { ...status, at: Date.now() }
-                              : null;
-                          }}
+                          nearLabel={nearLabel}
+                          replanBusy={replanBusy}
+                          onStatus={handleLiveFix}
                         />
                         {state.stepIndex > 0 && (
                           <button
@@ -1715,6 +1911,9 @@ function App() {
                       language={language}
                       currentLegId={
                         state.phase === "active" ? step?.legId : undefined
+                      }
+                      position={
+                        state.phase === "active" && liveFix ? liveFix : null
                       }
                     />
                     <div className="conditions-card">

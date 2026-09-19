@@ -210,3 +210,28 @@ def test_journey_names_its_own_endpoints(client):
 
     assert j["origin"]["name"]["en"] == "Toa Payoh Hub"
     assert j["destination"]["name"]["en"] == "Singapore General Hospital"
+
+
+def test_revgeocode_names_the_nearest_place(client, monkeypatch):
+    async def fake_rev(lat, lon):
+        return [
+            {"BUILDINGNAME": "null", "BLOCK": "712", "ROAD": "ANG MO KIO AVENUE 6"},
+            {"BUILDINGNAME": "KEBUN BARU HEIGHTS", "BLOCK": "227", "ROAD": "ANG MO KIO AVENUE 3"},
+        ]
+
+    monkeypatch.setattr(journeys_api, "reverse_geocode", fake_rev)
+    r = client.get("/api/revgeocode", params={"lat": 1.37, "lon": 103.84})
+
+    assert r.status_code == 200
+    # A real building name beats a bare block number.
+    assert r.json() == {"name": "Kebun Baru Heights"}
+
+
+def test_revgeocode_falls_back_to_block_and_road(client, monkeypatch):
+    async def fake_rev(lat, lon):
+        return [{"BUILDINGNAME": "null", "BLOCK": "712", "ROAD": "ANG MO KIO AVENUE 6"}]
+
+    monkeypatch.setattr(journeys_api, "reverse_geocode", fake_rev)
+    r = client.get("/api/revgeocode", params={"lat": 1.37, "lon": 103.84})
+
+    assert r.json() == {"name": "Blk 712 Ang Mo Kio Avenue 6"}

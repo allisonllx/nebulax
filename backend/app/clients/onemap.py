@@ -46,6 +46,16 @@ class OneMapClient:
             r.raise_for_status()
             return r.json().get("results", [])
 
+    async def reverse_geocode(self, lat: float, lon: float) -> list[dict]:
+        """Nearest addresses/buildings for a coordinate, raw OneMap rows."""
+        token = await self._current_token()
+        async with httpx.AsyncClient(timeout=30, headers={"Authorization": token}) as http:
+            r = await http.get(f"{BASE}/public/revgeocode",
+                               params={"location": f"{lat},{lon}", "buffer": 50,
+                                       "addressType": "All", "otherFeatures": "N"})
+            r.raise_for_status()
+            return r.json().get("GeocodeInfo", [])
+
     async def route_candidates(self, origin, destination, arrive_by: datetime) -> list[dict]:
         """Transit and bus-only itineraries for the trip, as raw OneMap dicts."""
         token = await self._current_token()

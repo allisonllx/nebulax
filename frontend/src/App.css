@@ -2097,6 +2097,7 @@ legend {
 }
 .option-row-wrap button {
   flex: 1 1 40%;
+}
 /* Saved profile and foreground location guidance. */
 .saved-place-row {
   border-bottom: 1px solid #c7d2bf;
@@ -2180,4 +2181,105 @@ legend {
   margin: 0;
   min-height: 48px;
 
+}
+
+/* --- Live position: pulsing blue dot ----------------------------------------- */
+.map-me {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1d6ae5;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px rgba(29, 106, 229, 0.35), 0 2px 8px rgba(20, 40, 90, 0.4);
+  position: relative;
+}
+.map-me::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(29, 106, 229, 0.45);
+  animation: map-me-pulse 2s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-me::after {
+    animation: none;
+  }
+}
+@keyframes map-me-pulse {
+  0% { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* --- Off-route card: roomy and actionable ------------------------------------ */
+.offroute-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 20px;
+  border-radius: 18px;
+  border: 2px solid #e3c07f;
+  background: #fdf6e5;
+}
+.offroute-title {
+  font-size: 1.25em;
+  color: #6b4e16;
+}
+.offroute-where {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 1.02em;
+  line-height: 1.5;
+  color: #5a4a1e;
+}
+.offroute-where svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: #1d6ae5;
+}
+.offroute-actions {
+  display: flex;
+  gap: 10px;
+}
+.offroute-actions .secondary {
+  flex: 1;
+  justify-content: center;
+}
+.offroute-note {
+  font-size: 0.85em;
+  color: #7a693c;
+  line-height: 1.5;
+}
+
+/* --- Family-mode lost alert --------------------------------------------------- */
+.lost-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 18px;
+  border: 2px solid #d08a84;
+  background: #fbecea;
+}
+.lost-alert strong {
+  font-size: 1.2em;
+  color: #8a2f27;
+}
+.lost-alert p {
+  color: #6e3d38;
+  line-height: 1.55;
+}
+.lost-alert small {
+  color: #97605a;
+}
+
+.offroute-auto {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f6ecd2;
+  color: #6b4e16;
+  font-weight: 600;
+  line-height: 1.5;
 }

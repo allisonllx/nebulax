@@ -40,6 +40,8 @@ export function LocationGuidance({
   enabled,
   onEnable,
   onStatus,
+  nearLabel,
+  replanBusy,
 }: {
   journey: Journey;
   stepIndex: number;
@@ -51,7 +53,18 @@ export function LocationGuidance({
   enabled: boolean;
   onEnable: (enabled: boolean) => void;
   /** Reports live progress on the current leg (or null when unreliable) for spoken reminders. */
-  onStatus?: (status: { endMetres: number; off: boolean } | null) => void;
+  onStatus?: (status: {
+    endMetres: number;
+    routeMetres: number;
+    off: boolean;
+    lat: number;
+    lon: number;
+    accuracy: number;
+  } | null) => void;
+  /** Reverse-geocoded "he is near ..." label, resolved by the parent. */
+  nearLabel?: string | null;
+  /** True while the app is automatically replanning from his position. */
+  replanBusy?: boolean;
 }) {
   const t = (en: string, zh: string) => (language === "en" ? en : zh);
   const step = journey.steps[stepIndex];
@@ -168,10 +181,30 @@ export function LocationGuidance({
   const off = Boolean(away && distances);
   // Coarse-grained so the parent effect is not re-triggered by GPS jitter.
   const endMetres = distances ? Math.max(10, Math.round(distances.end / 10) * 10) : null;
+  const routeMetres = distances
+    ? Math.max(0, Math.round(distances.route / 25) * 25)
+    : null;
+  const coarseLat = fix ? Math.round(fix.lat * 10000) / 10000 : null;
+  const coarseLon = fix ? Math.round(fix.lon * 10000) / 10000 : null;
   useEffect(() => {
-    onStatus?.(endMetres === null ? null : { endMetres, off });
+    onStatus?.(
+      endMetres === null ||
+        routeMetres === null ||
+        coarseLat === null ||
+        coarseLon === null ||
+        !fix
+        ? null
+        : {
+            endMetres,
+            routeMetres,
+            off,
+            lat: coarseLat,
+            lon: coarseLon,
+            accuracy: fix.accuracy,
+          },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endMetres, off]);
+  }, [endMetres, routeMetres, off, coarseLat, coarseLon]);
   useEffect(() => {
     return () => onStatus?.(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -363,28 +396,45 @@ export function LocationGuidance({
         </div>
       )}
       {off && (
-        <div className="location-warning" role="alert">
-          <p>{message}</p>
-          <button className="secondary" onClick={speak}>
-            <Volume2 size={20} />
-            {t("Read guidance aloud", "朗读指引")}
-          </button>
-          {step.directions.length > 0 && (
-            <ol>
-              {step.directions.map((d, i) => (
-                <li key={i}>{d[language]}</li>
-              ))}
-            </ol>
-          )}
-          <p>
+        <div className="offroute-card" role="alert">
+          <strong className="offroute-title">
+            {t("You seem to be off the route", "您好像走偏了")}
+          </strong>
+          <p className="offroute-where">
+            <MapPin size={20} />
+            {nearLabel
+              ? t(`You are near ${nearLabel}.`, `您现在在 ${nearLabel} 附近。`)
+              : t(
+                  "Your position is shown as a blue dot on the map.",
+                  "您的位置已用蓝点标在地图上。",
+                )}
+          </p>
+          <p className="offroute-auto" role="status">
+            {replanBusy
+              ? t(
+                  "Replanning your route from here — no need to do anything.",
+                  "正在从您的位置重新规划路线——您不用做任何操作。",
+                )
+              : t(
+                  `The app will guide you from here to ${journey.destination?.name[language] ?? t("your destination", "目的地")}. Stay where you are for a moment.`,
+                  `App 会从这里重新带您去${journey.destination?.name[language] ?? "目的地"}，请先在原地稍等。`,
+                )}
+          </p>
+          <div className="offroute-actions">
+            <button className="secondary" onClick={speak}>
+              <Volume2 size={20} />
+              {t("Read aloud", "朗读")}
+            </button>
+            <button className="secondary" onClick={onHelp}>
+              {t("Help me find my way", "帮我找到路")}
+            </button>
+          </div>
+          <p className="offroute-note">
             {t(
-              "Follow marked walkways. Do not take a shortcut across roads to reach the route.",
-              "请沿标示的人行道行走，不要为返回路线而横穿道路。",
+              "Stop somewhere safe. Follow marked walkways — do not cut across roads.",
+              "请先在安全的地方停下。沿标示的人行道行走，不要横穿马路。",
             )}
           </p>
-          <button className="secondary" onClick={onHelp}>
-            {t("Help me find my way", "帮我找到路")}
-          </button>
         </div>
       )}
       <p className="arrival-hint">
