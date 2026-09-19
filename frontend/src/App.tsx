@@ -54,6 +54,8 @@ import {
   dialNumber,
 } from "./profile";
 import type { Appointment, Family } from "./profile";
+import { defaultTravelProfile, travelProfileSchema } from "./travelProfile";
+import { LocationGuidance } from "./LocationGuidance";
 import "./App.css";
 
 type View =
@@ -61,6 +63,7 @@ type View =
   | "details"
   | "change"
   | "help"
+  | "profile"
   | "settings"
   | "appointment"
   | "family";
@@ -89,13 +92,16 @@ function App() {
   // Two audiences, one app: Mr Tan gets guidance only; family gets the fuller controls.
   const [personaMode, setPersonaMode] = useState<"elder" | "caregiver">(() => {
     try {
-      return localStorage.getItem("nebulax:mode") === "caregiver" ? "caregiver" : "elder";
+      return localStorage.getItem("nebulax:mode") === "caregiver"
+        ? "caregiver"
+        : "elder";
     } catch {
       return "elder";
     }
   });
   const [online, setOnline] = useState(navigator.onLine);
   const [simulateOffline, setSimulateOffline] = useState(false);
+  const [locationEnabled, setLocationEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -202,6 +208,8 @@ function App() {
       const aidMargin = answers.mobilityAid === "walker" ? 0.9 : 1;
       const { journey: main, alternatives } = await planJourneyWithOptions({
         ...planRequest,
+        origin: answers.home,
+        destination: answers.destinations[0],
         walkingSpeedFactor: answers.paceFactor * aidMargin,
       });
       if (alternatives.length > 0) {
@@ -216,10 +224,14 @@ function App() {
       setBusy(false);
     }
   }
-  function commitRoute(chosen: import("./journey").Journey, answers: SetupAnswers) {
+  function commitRoute(
+    chosen: import("./journey").Journey,
+    answers: SetupAnswers,
+  ) {
     setState({
       schemaVersion: 1,
       journey: chosen,
+      profile: travelProfileSchema.parse(answers),
       stepIndex: 0,
       phase: "planned",
       language,
@@ -242,6 +254,49 @@ function App() {
     setPersonaMode("elder");
   }
 
+  const profile = state?.profile ?? {
+    ...defaultTravelProfile,
+    home: journey?.origin
+      ? { ...journey.origin, name: journey.origin.name[language] }
+      : defaultTravelProfile.home,
+    destinations: journey?.destination
+      ? [{ ...journey.destination, name: journey.destination.name[language] }]
+      : defaultTravelProfile.destinations,
+  };
+  function saveProfile(answers: SetupAnswers) {
+    if (!state) return;
+    setRepeatSeconds(answers.repeatSeconds);
+    const next = {
+      ...state,
+      profile: travelProfileSchema.parse(answers),
+      family: {
+        ...state.family,
+        linked: answers.shareWithFamily,
+        scopes: answers.shareWithFamily
+          ? state.family.linked
+            ? state.family.scopes
+            : { tripUpdates: true, prepareAppointments: true }
+          : { tripUpdates: false, prepareAppointments: false },
+        consentedAt: answers.shareWithFamily
+          ? (state.family.consentedAt ?? new Date().toISOString())
+          : null,
+        proposal: answers.shareWithFamily ? state.family.proposal : null,
+      },
+    };
+    if (!saveSnapshot(next)) {
+      setError("save");
+      return;
+    }
+    setState(next);
+    go("settings");
+    setNotice(
+      t(
+        "Profile saved. Future plans will use these details.",
+        "资料已保存，将用于以后的行程规划。",
+      ),
+    );
+  }
+
   function go(nextView: View) {
     setView(nextView);
     setNotice("");
@@ -257,11 +312,15 @@ function App() {
     setError("");
     try {
       const result = await planJourney(
-        requestForAppointment(state?.appointment ?? defaultAppointment),
+        requestForAppointment(
+          state?.appointment ?? defaultAppointment,
+          state?.profile,
+        ),
       );
       setState({
         schemaVersion: 1,
         journey: result,
+        profile: state?.profile,
         stepIndex: 0,
         phase: "planned",
         language,
@@ -313,7 +372,9 @@ function App() {
     setBusy(true);
     setError("");
     try {
-      const planned = await planJourney(requestForAppointment(candidate));
+      const planned = await planJourney(
+        requestForAppointment(candidate, current.profile),
+      );
       if (stateRef.current !== current) {
         setNotice(
           t(
@@ -624,13 +685,13 @@ function App() {
           <div className="onboarding">
             <section className="onboarding-card">
               <span className="eyebrow">
-                {t("LAST STEP · ROUTES COMPUTED FOR HIM", "最后一步 · 已按爸爸的情况算出方案")}
+                {t(
+                  "LAST STEP · ROUTES COMPUTED FOR HIM",
+                  "最后一步 · 已按爸爸的情况算出方案",
+                )}
               </span>
               <h1>
-                {t(
-                  "Which way does he usually go?",
-                  "平时是怎么去医院的？",
-                )}
+                {t("Which way does he usually go?", "平时是怎么去医院的？")}
               </h1>
               <p className="onboarding-note">
                 {t(
@@ -653,10 +714,14 @@ function App() {
                     <small>
                       {t(
                         `Leave ${time(option.departureTime)} · arrive ${arrival(option)}` +
-                          (option.transfers === 0 ? " · no transfer" : ` · ${option.transfers} transfer`) +
+                          (option.transfers === 0
+                            ? " · no transfer"
+                            : ` · ${option.transfers} transfer`) +
                           (index === 0 ? " · fastest" : ""),
                         `最晚 ${time(option.departureTime)} 出门 · 预计 ${arrival(option)} 到` +
-                          (option.transfers === 0 ? " · 不用换车" : ` · 换乘 ${option.transfers} 次`) +
+                          (option.transfers === 0
+                            ? " · 不用换车"
+                            : ` · 换乘 ${option.transfers} 次`) +
                           (index === 0 ? " · 最快" : ""),
                       )}
                     </small>
@@ -708,9 +773,7 @@ function App() {
               )}
             {personaMode === "caregiver" && view === "journey" ? (
               <section className="caregiver-home">
-                <span className="eyebrow">
-                  {t("FAMILY VIEW", "家人视角")}
-                </span>
+                <span className="eyebrow">{t("FAMILY VIEW", "家人视角")}</span>
                 <h1 ref={headingRef} tabIndex={-1}>
                   {state.phase === "active"
                     ? t("Dad is on his way.", "爸爸正在路上。")
@@ -793,7 +856,10 @@ function App() {
                   </div>
                 )}
                 <div className="caregiver-actions">
-                  <button className="secondary" onClick={() => go("appointment")}>
+                  <button
+                    className="secondary"
+                    onClick={() => go("appointment")}
+                  >
                     <CalendarDays size={20} />
                     {t("Manage appointment", "管理预约")}
                   </button>
@@ -805,6 +871,7 @@ function App() {
                 {!isDemo && (
                   <TripPlanner
                     language={language}
+                    profile={profile}
                     onPlanned={(chosen) => {
                       setState({
                         ...state,
@@ -816,7 +883,10 @@ function App() {
                         progressUpdatedAt: null,
                       });
                       setNotice(
-                        t("New journey saved for Mr Tan.", "新行程已保存，爸爸那边已更新。"),
+                        t(
+                          "New journey saved for Mr Tan.",
+                          "新行程已保存，爸爸那边已更新。",
+                        ),
                       );
                     }}
                   />
@@ -847,6 +917,17 @@ function App() {
                   })
                 }
               />
+            ) : view === "profile" ? (
+              <Onboarding
+                editing
+                initial={{ ...profile, shareWithFamily: state.family.linked }}
+                language={language}
+                busy={busy}
+                offline={offline}
+                onLanguage={setLanguage}
+                onComplete={saveProfile}
+                onCancel={() => go("settings")}
+              />
             ) : view === "settings" ? (
               <section className="standalone-card">
                 <span className="eyebrow">
@@ -855,6 +936,16 @@ function App() {
                 <h1 ref={headingRef} tabIndex={-1}>
                   {t("Your display, your way", "让界面更适合您")}
                 </h1>
+                <button className="secondary" onClick={() => go("profile")}>
+                  {t("Edit Dad’s profile", "编辑爸爸的资料")}
+                  <ArrowRight />
+                </button>
+                <p className="field-hint">
+                  {t(
+                    "Home, regular destinations, walking pace, mobility, voice and sharing.",
+                    "家庭地址、常去地点、步速、行动辅助、语音和分享设置。",
+                  )}
+                </p>
                 <fieldset>
                   <legend>{t("Language", "语言")}</legend>
                   <div className="option-row">
@@ -917,8 +1008,8 @@ function App() {
                 </div>
                 <p className="muted">
                   {t(
-                    "Your choices are saved on this phone. Read-aloud starts only when you choose it.",
-                    "您的选择会保存在此手机上。只有在您点击后才会开始朗读。",
+                    "Your choices are saved on this phone. Change spoken guidance in Dad’s profile.",
+                    "您的选择会保存在此手机上。可在爸爸的资料中修改语音指引设置。",
                   )}
                 </p>
                 <button className="primary" onClick={() => go("journey")}>
@@ -1267,7 +1358,9 @@ function App() {
                           <div>
                             <span className="eyebrow">
                               {!journey.destination ||
-                              journey.destination.name.en.toLowerCase().includes("hospital")
+                              journey.destination.name.en
+                                .toLowerCase()
+                                .includes("hospital")
                                 ? t("HOSPITAL APPOINTMENT", "医院预约")
                                 : t("YOUR TRIP", "您的行程")}
                             </span>
@@ -1353,7 +1446,9 @@ function App() {
                                 ? journey.origin.name[language]
                                 : t("Home, Ang Mo Kio", "家，宏茂桥")}
                             </strong>
-                            <span>{journey.steps[0].instruction[language]}</span>
+                            <span>
+                              {journey.steps[0].instruction[language]}
+                            </span>
                           </div>
                           {journey.steps
                             .filter(
@@ -1451,7 +1546,13 @@ function App() {
                           {journey.steps.map((item, i) => (
                             <span
                               key={item.id}
-                              className={i <= state.stepIndex ? "done" : ""}
+                              className={
+                                i < state.stepIndex
+                                  ? "done"
+                                  : i === state.stepIndex
+                                    ? "current"
+                                    : "upcoming"
+                              }
                             />
                           ))}
                         </div>
@@ -1494,7 +1595,11 @@ function App() {
                         {state.stepIndex < journey.steps.length - 1 ? (
                           <p className="next-preview">
                             {t("After this: ", "接下来：")}
-                            {journey.steps[state.stepIndex + 1].instruction[language]}
+                            {
+                              journey.steps[state.stepIndex + 1].instruction[
+                                language
+                              ]
+                            }
                           </p>
                         ) : (
                           <p className="next-preview">
@@ -1502,19 +1607,27 @@ function App() {
                           </p>
                         )}
                         {listen(
-                          [step.instruction[language],
-                           ...step.directions.map((direction) => direction[language])].join(" "),
+                          [
+                            step.instruction[language],
+                            ...step.directions.map(
+                              (direction) => direction[language],
+                            ),
+                          ].join(" "),
                         )}
-                        <button
-                          className="primary"
+                        <LocationGuidance
+                          key={`${journey.id}-${journey.version}-${step.id}`}
+                          journey={journey}
+                          stepIndex={state.stepIndex}
+                          enabled={locationEnabled}
+                          onEnable={setLocationEnabled}
+                          language={language}
                           disabled={
                             busy || state.blocked || Boolean(state.proposal)
                           }
-                          onClick={advance}
-                        >
-                          {step.confirmation[language]}
-                          <Check size={25} />
-                        </button>
+                          onAdvance={advance}
+                          onHelp={() => go("help")}
+                          voice={true}
+                        />
                         {state.stepIndex > 0 && (
                           <button
                             className="text-button"
@@ -1705,7 +1818,11 @@ function App() {
         )}
       </main>
       {state && (
-        <div className="mode-bar" role="group" aria-label={t("Who is using the app", "使用者模式")}>
+        <div
+          className="mode-bar"
+          role="group"
+          aria-label={t("Who is using the app", "使用者模式")}
+        >
           <button
             aria-pressed={personaMode === "elder"}
             onClick={() => {

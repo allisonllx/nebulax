@@ -1908,7 +1908,7 @@ legend {
   margin-bottom: 14px;
   border-radius: 14px;
   background: #fdf6e5;
-  border: 1.5px solid #eadfBd;
+  border: 1.5px solid #eadfbd;
   color: #6b5a2a;
   font-size: 0.98em;
   line-height: 1.45;
@@ -2097,4 +2097,87 @@ legend {
 }
 .option-row-wrap button {
   flex: 1 1 40%;
+/* Saved profile and foreground location guidance. */
+.saved-place-row {
+  border-bottom: 1px solid #c7d2bf;
+  padding: 12px 0;
+}
+.onboarding-card .place-field {
+  margin: 16px 0;
+}
+.location-guidance {
+  display: grid;
+  gap: 16px;
+}
+.location-consent,
+.location-status {
+  padding: 18px;
+  border: 1px solid #c7d2bf;
+  border-radius: 18px;
+  background: #f4f7ef;
+}
+.location-consent p,
+.arrival-hint {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.location-warning {
+  padding: 20px;
+  border: 2px solid #a6732b;
+  border-radius: 18px;
+  background: #fff7e5;
+  display: grid;
+  gap: 14px;
+}
+.location-warning p {
+  margin: 0;
+}
+.arrival-ready {
+  outline: 3px solid #6c8b4d;
+  outline-offset: 3px;
+}
+.guidance-card .progress-track span.upcoming {
+  background: #dde4d8;
+}
+.guidance-card .progress-track span.done {
+  background: #507247;
+}
+.guidance-card .progress-track span.current {
+  background: #245640;
+  outline: 2px solid #245640;
+  outline-offset: 3px;
+}
+
+.skip-link:not(:focus) {
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.location-status {
+  display: grid;
+  gap: 18px;
+}
+.location-status-copy {
+  display: grid;
+  gap: 8px;
+}
+.location-status-copy p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.location-status-actions {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #c7d2bf;
+}
+.location-status-actions button {
+  margin: 0;
+  min-height: 48px;
+
 }
