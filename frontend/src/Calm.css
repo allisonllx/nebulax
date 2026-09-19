@@ -785,13 +785,6 @@
   font-size: 16px;
   white-space: normal;
 }
-.simulation-banner {
-  padding: 12px 20px;
-  background: #fff1cd;
-  color: #66450b;
-  font-weight: 700;
-  text-align: center;
-}
 
 .presentation-demo .scenario-buttons .primary {
   background: var(--green);

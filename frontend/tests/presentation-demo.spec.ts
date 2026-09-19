@@ -103,6 +103,10 @@ for (const outcome of [
       exact: true,
     });
     await expect(activate).toBeEnabled();
+    await expect(activate).toHaveAttribute("aria-pressed", "false");
+    await expect(
+      page.getByRole("button", { name: "1. Show original route", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
     await page.mouse.move(0, 0);
     expect(
       await activate.evaluate((el) => {
@@ -112,6 +116,14 @@ for (const outcome of [
     ).toBe(true);
     await activate.click();
     if (outcome === "replacement_available") {
+      await expect(activate).toHaveAttribute("aria-pressed", "true");
+      await expect(
+        page.getByRole("button", {
+          name: "1. Show original route",
+          exact: true,
+        }),
+      ).toHaveAttribute("aria-pressed", "false");
+      await expect(page.locator(".simulation-banner")).toHaveCount(0);
       await expect(
         page.getByText(
           "Route updated to avoid the crowded platform and the lift under maintenance.",

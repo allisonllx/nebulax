@@ -101,7 +101,6 @@ function App() {
   });
   const [online, setOnline] = useState(navigator.onLine);
   const [simulateOffline, setSimulateOffline] = useState(false);
-  const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -961,27 +960,6 @@ function App() {
           </button>
         </nav>
       )}
-      {(activeScenario ||
-        journey?.dataMode === "simulated" ||
-        state?.proposal?.dataMode === "simulated" ||
-        simulateOffline) && (
-        <div className="simulation-banner" role="status">
-          {simulateOffline
-            ? t(
-                "Offline simulation · saved guidance only",
-                "离线模拟 · 仅使用已保存指引",
-              )
-            : activeScenario
-              ? t(
-                  `SIMULATED CONDITIONS · ${activeScenario}`,
-                  `模拟状况 · ${activeScenario}`,
-                )
-              : t(
-                  "Saved route uses simulated conditions",
-                  "保存的路线使用了模拟状况",
-                )}
-        </div>
-      )}
       <main id="main" className="main-shell">
         {back}
         {offline && (
@@ -1752,7 +1730,6 @@ function App() {
             onOffline={() => setSimulateOffline((value) => !value)}
             onPrepare={preparePresentation}
             onCheck={() => refresh("normal", true)}
-            onActive={setActiveScenario}
           />
         )}
         {isDemo && state && (

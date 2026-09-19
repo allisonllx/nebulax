@@ -28,7 +28,6 @@ export function PresentationDemo({
   onOffline,
   onPrepare,
   onCheck,
-  onActive,
 }: {
   language: Language;
   busy: boolean;
@@ -38,7 +37,6 @@ export function PresentationDemo({
   onOffline: () => void;
   onPrepare: () => Promise<void>;
   onCheck: () => Promise<void>;
-  onActive: (name: string | null) => void;
 }) {
   const [catalog, setCatalog] = useState<z.infer<typeof catalogSchema> | null>(
     null,
@@ -47,14 +45,10 @@ export function PresentationDemo({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const t = (en: string, zh: string) => (language === "zh" ? zh : en);
-  const receiveCatalog = useCallback(
-    (value: unknown) => {
-      const next = catalogSchema.parse(value);
-      setCatalog(next);
-      onActive(next.active);
-    },
-    [onActive],
-  );
+  const receiveCatalog = useCallback((value: unknown) => {
+    const next = catalogSchema.parse(value);
+    setCatalog(next);
+  }, []);
   async function load() {
     receiveCatalog(await scenarioRequest());
   }
@@ -81,12 +75,10 @@ export function PresentationDemo({
         const result = z
           .object({ active: z.string() })
           .parse(await scenarioRequest("/hard_for_him/activate", "POST"));
-        onActive(result.active);
         setCatalog((c) => c && { ...c, active: result.active });
         await onCheck();
       } else {
         await scenarioRequest("/deactivate", "POST");
-        onActive(null);
         setCatalog((c) => c && { ...c, active: null });
         if (action === "prepare") {
           await onPrepare();
@@ -112,14 +104,18 @@ export function PresentationDemo({
       </p>
       <div className="scenario-buttons">
         <button
-          className="secondary"
+          className={catalog?.active === null ? "primary" : "secondary"}
+          aria-pressed={catalog?.active === null}
           disabled={disabled || !catalog}
           onClick={() => void run("prepare")}
         >
           {t("1. Show original route", "1. 显示原路线")}
         </button>
         <button
-          className="primary"
+          className={
+            catalog?.active === "hard_for_him" ? "primary" : "secondary"
+          }
+          aria-pressed={catalog?.active === "hard_for_him"}
           disabled={disabled || !hasJourney || !available}
           onClick={() => void run("activate")}
         >
