@@ -410,6 +410,11 @@ const snapshotSchema = z
       })
       .nullable()
       .default(null),
+    // The most recent deviation the app recovered from automatically.
+    lastDeviation: z
+      .object({ at: z.string().datetime(), near: z.string().nullable() })
+      .nullable()
+      .default(null),
   })
   .refine((value) => value.stepIndex < value.journey.steps.length);
 export type Snapshot = z.infer<typeof snapshotSchema>;

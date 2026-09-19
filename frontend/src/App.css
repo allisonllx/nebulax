@@ -2283,3 +2283,64 @@ legend {
   font-weight: 600;
   line-height: 1.5;
 }
+
+/* --- Warm-companion touches --------------------------------------------------- */
+.prepared-byline {
+  margin: -8px 0 16px;
+  color: #55705f;
+  font-size: 0.82em;
+}
+.call-family {
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  text-decoration: none;
+}
+.live-remaining {
+  margin: 2px 0 6px;
+  font-size: 1.35em;
+  font-weight: 700;
+  color: #2f6a48;
+}
+
+.recovered-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 2px solid #bcd4b6;
+  background: #eef6ea;
+  color: #24513a;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.offroute-calm {
+  font-size: 1.02em;
+  color: #6b4e16;
+  line-height: 1.5;
+}
+
+.caregiver-eta {
+  color: #55705f;
+  font-size: 0.88em;
+}
+.deviation-note {
+  text-align: left;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1.5px solid #e3c07f;
+  background: #fdf6e5;
+  color: #6b4e16;
+  font: inherit;
+  font-size: 0.88em;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.caregiver-actions {
+  flex-wrap: wrap;
+}
+.caregiver-actions .secondary {
+  flex: 1 1 44%;
+}

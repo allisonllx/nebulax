@@ -398,8 +398,17 @@ export function LocationGuidance({
       {off && (
         <div className="offroute-card" role="alert">
           <strong className="offroute-title">
-            {t("You seem to be off the route", "您好像走偏了")}
+            {t(
+              "The route has changed — please stop for a moment",
+              "路线变了，请先停一下",
+            )}
           </strong>
+          <p className="offroute-calm">
+            {t(
+              "You are safe. We are finding a new route for you.",
+              "您现在很安全，我们正在找新的路线。",
+            )}
+          </p>
           <p className="offroute-where">
             <MapPin size={20} />
             {nearLabel
@@ -412,12 +421,12 @@ export function LocationGuidance({
           <p className="offroute-auto" role="status">
             {replanBusy
               ? t(
-                  "Replanning your route from here — no need to do anything.",
-                  "正在从您的位置重新规划路线——您不用做任何操作。",
+                  "Finding your new route now — no need to do anything.",
+                  "正在为您寻找新路线——您不用做任何操作。",
                 )
               : t(
-                  `The app will guide you from here to ${journey.destination?.name[language] ?? t("your destination", "目的地")}. Stay where you are for a moment.`,
-                  `App 会从这里重新带您去${journey.destination?.name[language] ?? "目的地"}，请先在原地稍等。`,
+                  `We will guide you from here to ${journey.destination?.name[language] ?? t("your destination", "目的地")}. Stay where you are for a moment.`,
+                  `我们会从这里重新带您去${journey.destination?.name[language] ?? "目的地"}，请先在原地稍等。`,
                 )}
           </p>
           <div className="offroute-actions">

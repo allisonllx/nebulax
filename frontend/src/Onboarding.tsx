@@ -7,6 +7,8 @@ import { defaultTravelProfile, type TravelProfile } from "./travelProfile";
 import type { PlacePin } from "./journey";
 export interface SetupAnswers extends TravelProfile {
   shareWithFamily: boolean;
+  /** Daughter's phone for the elder-side "Call Mei Ling" button. Optional. */
+  familyPhone: string;
 }
 
 const REPEAT_OPTIONS = [
@@ -56,6 +58,7 @@ export function Onboarding({
   const [walkMinutes, setWalkMinutes] = useState(initialWalkMinutes);
   const [repeatSeconds, setRepeatSeconds] = useState(initial?.repeatSeconds ?? 60);
   const [share, setShare] = useState(initial?.shareWithFamily ?? true);
+  const [familyPhone, setFamilyPhone] = useState("");
 
   const [home, setHome] = useState<PlacePin | null>(initial?.home ?? null);
   const [destinations, setDestinations] = useState<(PlacePin | null)[]>(
@@ -339,6 +342,23 @@ export function Onboarding({
           "不影响使用，以后随时可以改。",
         ),
       )}
+      <label className="onboarding-field">
+        <span>
+          {t(
+            "Mei Ling's phone — for his 'Call Mei Ling' button (optional)",
+            "美玲的电话——用于爸爸的“联系女儿”按钮（可不填）",
+          )}
+        </span>
+        <div className="onboarding-number">
+          <input
+            type="tel"
+            inputMode="tel"
+            value={familyPhone}
+            placeholder={t("e.g. 9123 4567", "例如 9123 4567")}
+            onChange={(event) => setFamilyPhone(event.target.value)}
+          />
+        </div>
+      </label>
       <button
         className="primary"
         disabled={busy || (!editing && offline) || !validPlaces}
@@ -356,6 +376,7 @@ export function Onboarding({
                 : paceFromMinutes(walkMinutes),
             repeatSeconds,
             shareWithFamily: share,
+            familyPhone: familyPhone.trim(),
           })
         }
       >
