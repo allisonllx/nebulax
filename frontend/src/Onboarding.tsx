@@ -18,13 +18,19 @@ interface Props {
   onComplete: (answers: SetupAnswers) => void;
 }
 
-const PACE = { 5: 1.0, 10: 0.75, 15: 0.6, 20: 0.45 } as const;
+const WALK_PRESETS = [5, 10, 15, 20] as const;
+
+// Continuous pace factor from the home-to-station walk time. Fits the old presets
+// (5→~0.95, 10→~0.78, 15→~0.62, 20→~0.46) and extends smoothly to any entered value.
+function paceFromMinutes(minutes: number): number {
+  return Math.min(1.0, Math.max(0.3, 1.1 - 0.032 * minutes));
+}
 
 export function Onboarding({ language, busy, offline, onLanguage, onComplete }: Props) {
   const t = (en: string, zh: string) => (language === "en" ? en : zh);
   const [stage, setStage] = useState(0);
   const [mobilityAid, setMobilityAid] = useState<SetupAnswers["mobilityAid"]>("cane");
-  const [walkMinutes, setWalkMinutes] = useState<keyof typeof PACE>(15);
+  const [walkMinutes, setWalkMinutes] = useState(15);
   const [voice, setVoice] = useState<SetupAnswers["voice"]>("both");
   const [share, setShare] = useState(true);
 
@@ -76,10 +82,28 @@ export function Onboarding({ language, busy, offline, onLanguage, onComplete }: 
           "从家走到宏茂桥地铁站，爸爸平时要走多久？",
         )}
       </h1>
-      {([5, 10, 15, 20] as const).map((m) =>
+      {WALK_PRESETS.map((m) =>
         choice(walkMinutes === m, () => setWalkMinutes(m),
-          t(m === 20 ? "20 minutes or more" : `About ${m} minutes`, m === 20 ? "20 分钟以上" : `大约 ${m} 分钟`)),
+          t(`About ${m} minutes`, `大约 ${m} 分钟`)),
       )}
+      <label className="onboarding-field">
+        <span>{t("Or enter the exact minutes", "或直接填写具体分钟数")}</span>
+        <div className="onboarding-number">
+          <input
+            type="number"
+            min={1}
+            max={60}
+            inputMode="numeric"
+            value={(WALK_PRESETS as readonly number[]).includes(walkMinutes) ? "" : walkMinutes || ""}
+            placeholder={t("e.g. 22", "例如 22")}
+            onChange={(event) => {
+              const value = parseInt(event.target.value, 10);
+              if (!Number.isNaN(value)) setWalkMinutes(Math.min(60, Math.max(1, value)));
+            }}
+          />
+          <span>{t("min", "分钟")}</span>
+        </div>
+      </label>
       <p className="onboarding-note">
         {t("This sets his real walking pace — every timing uses it.", "这决定了爸爸的真实步速，所有时间都按它计算。")}
       </p>
@@ -104,7 +128,7 @@ export function Onboarding({ language, busy, offline, onLanguage, onComplete }: 
         className="primary"
         disabled={busy || offline}
         onClick={() =>
-          onComplete({ mobilityAid, paceFactor: PACE[walkMinutes], voice, shareWithFamily: share })
+          onComplete({ mobilityAid, paceFactor: paceFromMinutes(walkMinutes), voice, shareWithFamily: share })
         }
       >
         {busy ? t("Planning his route…", "正在为爸爸规划路线…") : t("Plan his route", "为爸爸规划路线")}

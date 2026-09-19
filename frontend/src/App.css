@@ -2052,3 +2052,42 @@ legend {
   font-size: 0.86em;
   line-height: 1.5;
 }
+
+/* --- Onboarding manual number field ----------------------------------------- */
+.onboarding-field > span {
+  display: block;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #47604f;
+  margin: 4px 0 8px;
+}
+.onboarding-number {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 2px solid #d8e4d2;
+  border-radius: 16px;
+  padding: 12px 18px;
+  background: #fbfdf9;
+}
+.onboarding-number input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 1.15em;
+  font-weight: 600;
+  color: #223c2d;
+  outline: none;
+  min-width: 0;
+  -moz-appearance: textfield;
+}
+.onboarding-number input::-webkit-outer-spin-button,
+.onboarding-number input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.onboarding-number > span {
+  color: #5d7566;
+  font-weight: 600;
+}
