@@ -73,3 +73,33 @@ npm test
 ```
 
 Tests start preview servers on ports 4173 and 4174; stop existing previews first. They cover offline reopening, progress, Chinese/large text, reroute acceptance, blocked routes, arrival and API failures.
+
+## Profile and location guidance
+
+The setup quiz saves home and up to eight common destinations on this device. The first
+saved destination is used for appointment planning; the family trip planner offers all of them.
+Use Settings → Edit Dad’s profile to revise saved places and preferences. Saving a profile
+never replaces a current journey; its route preferences apply when planning again.
+
+Location guidance is opt-in during a journey and runs only while the guidance screen is open.
+It does not store coordinates or share them with family. Production requires HTTPS (localhost
+works for development). Denied, stale, inaccurate, or unmapped positions fall back to manual
+landmark confirmation. GPS does not verify boarding, station entrances, or lift access.
+
+Walking deviation alerts require three fresh, accurate readings spanning at least ten seconds,
+more than 50 metres (or twice reported accuracy) from the current leg. These initial thresholds
+need outdoor phone testing. Alerts offer spoken guidance and help, not an unverified shortcut
+or automatic rerouting. Arrival always requires the traveller's confirmation.
+
+Targeted browser checks with mocked routing and device positions:
+
+```sh
+cd frontend
+npm run test:guidance
+```
+
+To use a backend on another port:
+
+```sh
+API_PROXY_TARGET=http://127.0.0.1:8001 VITE_API_MODE=live npm run dev -- --port 5174
+```

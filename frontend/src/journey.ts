@@ -8,6 +8,9 @@ import {
 } from "./profile";
 import type { Appointment } from "./profile";
 
+import { travelProfileSchema } from "./travelProfile";
+import type { TravelProfile } from "./travelProfile";
+
 export type Language = "en" | "zh";
 export type Scenario = "normal" | "change" | "blocked";
 const bilingual = z.object({ en: z.string(), zh: z.string() });
@@ -308,8 +311,21 @@ async function request(path: string, body: unknown) {
   if (!response.ok) throw new Error(`Request failed (${response.status})`);
   return response.json() as Promise<unknown>;
 }
-export function requestForAppointment(appointment: Appointment): PlanRequest {
-  return { ...planRequest, arriveBy: appointmentInstant(appointment) };
+export function requestForAppointment(
+  appointment: Appointment,
+  profile?: TravelProfile,
+): PlanRequest {
+  return {
+    ...planRequest,
+    ...(profile
+      ? {
+          origin: profile.home,
+          destination: profile.destinations[0],
+          walkingSpeedFactor: profile.paceFactor,
+        }
+      : {}),
+    arriveBy: appointmentInstant(appointment),
+  };
 }
 function demoPlan(input: PlanRequest): Journey {
   const appointmentTime = new Date(input.arriveBy).valueOf();
@@ -334,7 +350,8 @@ const planResponseSchema = journeySchema.extend({
 export async function planJourneyWithOptions(
   input: PlanRequest,
 ): Promise<{ journey: Journey; alternatives: Journey[] }> {
-  if (isDemo) return { journey: journeySchema.parse(demoPlan(input)), alternatives: [] };
+  if (isDemo)
+    return { journey: journeySchema.parse(demoPlan(input)), alternatives: [] };
   const { alternatives, ...journey } = planResponseSchema.parse(
     await request("/journeys/plan", input),
   );
@@ -371,6 +388,7 @@ export async function refreshJourney(
 const snapshotSchema = z
   .object({
     schemaVersion: z.literal(1),
+    profile: travelProfileSchema.optional(),
     journey: journeySchema,
     stepIndex: z.number().int().nonnegative(),
     phase: z.enum(["planned", "active", "arrived"]),
