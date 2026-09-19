@@ -79,6 +79,13 @@ function App() {
     () => loadSnapshot()?.language ?? "zh",
   );
   const [large, setLarge] = useState(() => loadSnapshot()?.large ?? true);
+  const [repeatSeconds, setRepeatSeconds] = useState(() => {
+    try {
+      return Number(localStorage.getItem("nebulax:repeat") ?? "60") || 60;
+    } catch {
+      return 60;
+    }
+  });
   // Two audiences, one app: Mr Tan gets guidance only; family gets the fuller controls.
   const [personaMode, setPersonaMode] = useState<"elder" | "caregiver">(() => {
     try {
@@ -124,29 +131,37 @@ function App() {
       /* storage may be unavailable; the mode simply resets next visit */
     }
   }, [personaMode]);
-  // Read each active step aloud when he asked for voice during setup.
+  // Speak each active step aloud and repeat it on an interval — the persona (memory loss) needs
+  // the reminder to keep coming, not just play once. GPS-anchored phrasing is a separate feature.
   useEffect(() => {
     if (!state || state.phase !== "active" || personaMode !== "elder") return;
-    let voicePref = "both";
-    try {
-      voicePref = localStorage.getItem("nebulax:voice") ?? "both";
-    } catch {
-      /* default to voice on */
-    }
-    if (voicePref === "text" || !("speechSynthesis" in window)) return;
+    if (!("speechSynthesis" in window)) return;
     const current = state.journey.steps[state.stepIndex];
     // Read the whole step, not just the headline: the turn-by-turn directions are the guidance.
     const spoken = [
       current.instruction[language],
       ...current.directions.map((direction) => direction[language]),
     ].join(" ");
-    const utterance = new SpeechSynthesisUtterance(spoken);
-    utterance.lang = language === "en" ? "en-SG" : "zh-CN";
-    utterance.rate = 0.85;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    const say = () => {
+      const utterance = new SpeechSynthesisUtterance(spoken);
+      utterance.lang = language === "en" ? "en-SG" : "zh-CN";
+      utterance.rate = 0.85;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    };
+    say();
+    if (!repeatSeconds || Number.isNaN(repeatSeconds)) return;
+    const timer = window.setInterval(say, repeatSeconds * 1000);
+    return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.phase, state?.stepIndex, personaMode]);
+  }, [state?.phase, state?.stepIndex, personaMode, language, repeatSeconds]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("nebulax:repeat", String(repeatSeconds));
+    } catch {
+      /* reminders fall back to the default next launch */
+    }
+  }, [repeatSeconds]);
   useEffect(() => {
     const connected = () => setOnline(true);
     const disconnected = () => setOnline(false);
@@ -181,15 +196,13 @@ function App() {
   async function finishSetup(answers: SetupAnswers) {
     setBusy(true);
     setError("");
+    setRepeatSeconds(answers.repeatSeconds);
     try {
-      localStorage.setItem("nebulax:voice", answers.voice);
-    } catch {
-      /* fine — read-aloud stays on by default */
-    }
-    try {
+      // A walker means a bit more buffer on every walking leg, on top of his measured pace.
+      const aidMargin = answers.mobilityAid === "walker" ? 0.9 : 1;
       const { journey: main, alternatives } = await planJourneyWithOptions({
         ...planRequest,
-        walkingSpeedFactor: answers.paceFactor,
+        walkingSpeedFactor: answers.paceFactor * aidMargin,
       });
       if (alternatives.length > 0) {
         // Show the computed options and let Mei Ling pick the familiar one.
@@ -872,6 +885,25 @@ function App() {
                     <button aria-pressed={large} onClick={() => setLarge(true)}>
                       {t("Extra large", "特大")}
                     </button>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend>{t("Voice reminder", "语音提醒频率")}</legend>
+                  <div className="option-row option-row-wrap">
+                    {[
+                      { s: 30, en: "Every 30s", zh: "每 30 秒" },
+                      { s: 60, en: "Every 1 min", zh: "每 1 分钟" },
+                      { s: 120, en: "Every 2 min", zh: "每 2 分钟" },
+                      { s: 0, en: "On change", zh: "换步骤时" },
+                    ].map((option) => (
+                      <button
+                        key={option.s}
+                        aria-pressed={repeatSeconds === option.s}
+                        onClick={() => setRepeatSeconds(option.s)}
+                      >
+                        {t(option.en, option.zh)}
+                      </button>
+                    ))}
                   </div>
                 </fieldset>
                 <div className="text-preview">

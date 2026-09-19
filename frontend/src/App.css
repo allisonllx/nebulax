@@ -2091,3 +2091,10 @@ legend {
   color: #5d7566;
   font-weight: 600;
 }
+
+.option-row-wrap {
+  flex-wrap: wrap;
+}
+.option-row-wrap button {
+  flex: 1 1 40%;
+}

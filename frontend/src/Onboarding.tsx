@@ -6,9 +6,17 @@ export interface SetupAnswers {
   mobilityAid: "none" | "cane" | "walker";
   /** Derived walking-speed factor from "how long is your walk to the station". */
   paceFactor: number;
-  voice: "text" | "voice" | "both";
+  /** How often to repeat the spoken guidance, in seconds. 0 = say it once. */
+  repeatSeconds: number;
   shareWithFamily: boolean;
 }
+
+const REPEAT_OPTIONS = [
+  { seconds: 30, en: "Every 30 seconds", zh: "每 30 秒" },
+  { seconds: 60, en: "Every 1 minute", zh: "每 1 分钟" },
+  { seconds: 120, en: "Every 2 minutes", zh: "每 2 分钟" },
+  { seconds: 0, en: "Only when the step changes", zh: "仅在换步骤时" },
+] as const;
 
 interface Props {
   language: Language;
@@ -31,7 +39,7 @@ export function Onboarding({ language, busy, offline, onLanguage, onComplete }: 
   const [stage, setStage] = useState(0);
   const [mobilityAid, setMobilityAid] = useState<SetupAnswers["mobilityAid"]>("cane");
   const [walkMinutes, setWalkMinutes] = useState(15);
-  const [voice, setVoice] = useState<SetupAnswers["voice"]>("both");
+  const [repeatSeconds, setRepeatSeconds] = useState(60);
   const [share, setShare] = useState(true);
 
   const choice = (active: boolean, onClick: () => void, label: string, hint?: string) => (
@@ -49,8 +57,8 @@ export function Onboarding({ language, busy, offline, onLanguage, onComplete }: 
       <h1>{t("Mei Ling, set this up with your dad", "美玲，请和爸爸一起回答几个问题")}</h1>
       <p>
         {t(
-          "Four quick questions. The answers shape every route we plan for him.",
-          "只有四个问题。每一条为爸爸规划的路线，都会按这些答案来定。",
+          "Four quick questions. The route is planned around his pace, and the app speaks each step aloud — and repeats it — so it is easy to follow even when memory is not.",
+          "只有四个问题。路线会按爸爸的步速规划，App 会把每一步用语音读出来，并重复播报，即使记性不好也能跟上。",
         )}
       </p>
       <div className="option-row">
@@ -70,7 +78,10 @@ export function Onboarding({ language, busy, offline, onLanguage, onComplete }: 
       {choice(mobilityAid === "cane", () => setMobilityAid("cane"), t("Walking stick", "拐杖"))}
       {choice(mobilityAid === "walker", () => setMobilityAid("walker"), t("Walker", "助行器"))}
       <p className="onboarding-note">
-        {t("Routes always avoid stairs, whatever the answer.", "无论选哪项，路线都会避开楼梯。")}
+        {t(
+          "Routes always avoid stairs. A walker adds extra walking time and buffer so he is never rushed.",
+          "无论选哪项，路线都会避开楼梯。使用助行器时，会额外增加步行时间和余量，让爸爸不必赶。",
+        )}
       </p>
     </section>,
     // 2 — pace, asked as a fact he knows
@@ -108,13 +119,20 @@ export function Onboarding({ language, busy, offline, onLanguage, onComplete }: 
         {t("This sets his real walking pace — every timing uses it.", "这决定了爸爸的真实步速，所有时间都按它计算。")}
       </p>
     </section>,
-    // 3 — how instructions are given
+    // 3 — how often to repeat the spoken reminder (voice is always on for this persona)
     <section key="q3" className="onboarding-card">
       <span className="eyebrow">{t("QUESTION 3 OF 4", "第 3 题，共 4 题")}</span>
-      <h1>{t("How should instructions reach him?", "路上的指引怎么给爸爸？")}</h1>
-      {choice(voice === "text", () => setVoice("text"), t("Large text", "看大字"))}
-      {choice(voice === "voice", () => setVoice("voice"), t("Read aloud", "听语音"))}
-      {choice(voice === "both", () => setVoice("both"), t("Both", "大字加语音"))}
+      <h1>{t("How often should the app remind him aloud?", "多久用语音提醒一次爸爸？")}</h1>
+      {REPEAT_OPTIONS.map((option) =>
+        choice(repeatSeconds === option.seconds, () => setRepeatSeconds(option.seconds),
+          t(option.en, option.zh)),
+      )}
+      <p className="onboarding-note">
+        {t(
+          "Every step is always spoken aloud. This sets how often it repeats while he is on the way — helpful if he forgets what he is doing. You can change it later.",
+          "每一步都会用语音读出来。这里设定行程中重复播报的频率——如果爸爸容易忘记正在做什么，重复会很有帮助。以后随时可以修改。",
+        )}
+      </p>
     </section>,
     // 4 — consent, phrased as his choice
     <section key="q4" className="onboarding-card">
@@ -128,7 +146,7 @@ export function Onboarding({ language, busy, offline, onLanguage, onComplete }: 
         className="primary"
         disabled={busy || offline}
         onClick={() =>
-          onComplete({ mobilityAid, paceFactor: paceFromMinutes(walkMinutes), voice, shareWithFamily: share })
+          onComplete({ mobilityAid, paceFactor: paceFromMinutes(walkMinutes), repeatSeconds, shareWithFamily: share })
         }
       >
         {busy ? t("Planning his route…", "正在为爸爸规划路线…") : t("Plan his route", "为爸爸规划路线")}
