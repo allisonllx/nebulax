@@ -546,18 +546,53 @@ function mark(
       guidance.from ?? (language === "zh" ? "出发位置" : "Departure point");
     const toName =
       guidance.to ?? (language === "zh" ? "到达位置" : "Arrival point");
-    markers.push(
-      new maplibregl.Marker({
-        element: label(`${guidance.fromLabel}: ${fromName}`, "start"),
-      })
-        .setLngLat(first)
-        .addTo(instance),
+    const transit = activeStep.mode === "bus" || activeStep.mode === "train";
+    const section = Boolean(focusCoordinates?.length);
+    const fromText = section
+      ? language === "zh"
+        ? "本段出发"
+        : "Section start"
+      : transit
+        ? language === "zh"
+          ? "上车"
+          : "Board"
+        : language === "zh"
+          ? "出发"
+          : "Start";
+    const toText = section
+      ? language === "zh"
+        ? "走到这里"
+        : "Walk to here"
+      : transit
+        ? language === "zh"
+          ? "下车"
+          : "Alight"
+        : language === "zh"
+          ? "到达"
+          : "Arrive";
+    const startPin = label(fromText, section ? "section" : "start");
+    const endPin = label(toText, section ? "section" : "end");
+    startPin.classList.add("map-pin-compact");
+    endPin.classList.add("map-pin-compact");
+    startPin.setAttribute(
+      "aria-label",
+      section ? fromText : `${guidance.fromLabel}: ${fromName}`,
     );
+    endPin.setAttribute(
+      "aria-label",
+      section ? toText : `${guidance.toLabel}: ${toName}`,
+    );
+    // Opposite anchors keep the two labels apart even at identical coordinates.
     markers.push(
       new maplibregl.Marker({
-        element: label(`${guidance.toLabel}: ${toName}`, "end"),
+        element: startPin,
+        anchor: "bottom",
+        offset: [0, -8],
       })
-        .setLngLat(last)
+        .setLngLat(focusCoordinates?.[0] ?? first)
+        .addTo(instance),
+      new maplibregl.Marker({ element: endPin, anchor: "top", offset: [0, 8] })
+        .setLngLat(focusCoordinates?.at(-1) ?? last)
         .addTo(instance),
     );
     for (const [i, stop] of (activeStep.stops ?? []).entries()) {
@@ -575,30 +610,6 @@ function mark(
           .setPopup(popup)
           .addTo(instance),
       );
-    }
-    if (focusCoordinates?.length) {
-      if (JSON.stringify(focusCoordinates[0]) !== JSON.stringify(first))
-        markers.push(
-          new maplibregl.Marker({
-            element: label(
-              language === "zh" ? "这小段的起点" : "This section starts here",
-              "section",
-            ),
-          })
-            .setLngLat(focusCoordinates[0])
-            .addTo(instance),
-        );
-      if (JSON.stringify(focusCoordinates.at(-1)) !== JSON.stringify(last))
-        markers.push(
-          new maplibregl.Marker({
-            element: label(
-              language === "zh" ? "走到这里" : "Walk to here",
-              "section",
-            ),
-          })
-            .setLngLat(focusCoordinates.at(-1)!)
-            .addTo(instance),
-        );
     }
     return;
   }

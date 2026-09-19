@@ -249,16 +249,6 @@ export function ElderGuidance({
           )}
         </div>
       )}
-      {!recovery && guidance.from && guidance.to && (
-        <div className="leg-endpoints">
-          <span>
-            <b>{guidance.fromLabel}</b> {guidance.from}
-          </span>
-          <span>
-            <b>{guidance.toLabel}</b> {guidance.to}
-          </span>
-        </div>
-      )}
       {!recovery && part && (
         <section
           className="walking-substep"
@@ -396,6 +386,16 @@ export function ElderGuidance({
             </button>
           )}
         </section>
+      )}
+      {!recovery && guidance.from && guidance.to && (
+        <div className="leg-endpoints">
+          <span>
+            <b>{guidance.fromLabel}</b> {guidance.from}
+          </span>
+          <span>
+            <b>{guidance.toLabel}</b> {guidance.to}
+          </span>
+        </div>
       )}
       <div
         className="calm-orientation"

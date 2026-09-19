@@ -732,3 +732,17 @@
   display: block;
   height: 200px;
 }
+
+/* Full names stay outside the map and wrap instead of obscuring the route. */
+.leg-endpoints {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.calm-orientation .map-pin-compact {
+  padding: 4px 7px;
+  font-size: 12px;
+  border-radius: 8px;
+  max-width: none;
+  white-space: nowrap;
+  line-height: 1.2;
+}
